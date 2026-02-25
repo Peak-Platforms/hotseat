@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>HotSeat · Horseshoe Lake Charles</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --red:#cd181f; --red-glow:#cd181f44;
+    --gold:#f5cb5c; --gold-glow:#f5cb5c30;
+    --purple:#481459; --black:#01000B;
+    --panel:#0d0c18; --panel2:#16152a; --border:#2a2840;
+    --text:#f0ede8; --muted:#7a7890;
+    --green:#00e676; --green-glow:#00e67630;
+    --radius:12px;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:var(--black);color:var(--text);min-height:100vh;max-width:480px;margin:0 auto;display:flex;flex-direction:column;background-image:radial-gradient(ellipse at 50% 0%,#cd181f0f 0%,transparent 60%);}
+
+  /* TICKER */
+  #ticker-bar{display:none;background:var(--red);padding:10px 0;overflow:hidden;position:relative;z-index:100;}
+  #ticker-bar.visible{display:block;}
+  .ticker-track{display:flex;white-space:nowrap;animation:tickerScroll 22s linear infinite;}
+  .ticker-text{font-family:'Playfair Display',serif;font-size:1rem;letter-spacing:2px;color:#fff;padding:0 60px;}
+  @keyframes tickerScroll{0%{transform:translateX(100vw)}100%{transform:translateX(-100%)}}
+
+  /* BANNER */
+  #banner-container{position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:200;padding:12px;pointer-events:none;}
+  .alert-banner{background:var(--panel);border:2px solid var(--gold);border-radius:var(--radius);padding:16px 18px;box-shadow:0 4px 30px var(--gold-glow);animation:bannerDrop .4s cubic-bezier(.34,1.56,.64,1);pointer-events:all;}
+  .alert-banner.hotseat{border-color:var(--red);box-shadow:0 4px 30px var(--red-glow);}
+  @keyframes bannerDrop{from{opacity:0;transform:translateY(-20px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+  .banner-type{font-size:0.72rem;font-weight:700;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;}
+  .alert-banner.hotseat .banner-type{color:var(--red);}
+  .banner-msg{font-size:0.95rem;font-weight:600;line-height:1.5;}
+  .banner-dismiss{margin-top:10px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:0.78rem;padding:4px 12px;cursor:pointer;}
+
+  /* HEADER */
+  header{background:var(--panel);border-bottom:1px solid var(--border);padding:18px 20px 14px;}
+  .header-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;}
+  .logo{font-family:'Playfair Display',serif;font-size:2rem;font-weight:800;color:var(--gold);text-shadow:0 0 20px var(--gold-glow);letter-spacing:1px;}
+  .property-name{font-size:0.7rem;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
+  .live-pill{display:flex;align-items:center;gap:6px;background:#cd181f18;border:1px solid var(--red);border-radius:20px;padding:5px 12px;font-size:0.75rem;font-weight:700;color:var(--red);letter-spacing:2px;}
+  .live-dot{width:6px;height:6px;border-radius:50%;background:var(--red);animation:pulse 1.2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+  /* SECTION CHIPS */
+  .section-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;}
+  .section-chips::-webkit-scrollbar{display:none;}
+  .chip{flex-shrink:0;background:var(--black);border:2px solid var(--border);border-radius:20px;padding:6px 16px;font-size:0.82rem;font-weight:700;color:var(--muted);cursor:pointer;transition:all .2s;white-space:nowrap;}
+  .chip.active{border-color:var(--gold);color:var(--black);background:var(--gold);}
+
+  /* AUDIO PLAYER */
+  #audio-player{display:none;margin:12px 16px 0;background:var(--panel);border:2px solid var(--green);border-radius:var(--radius);padding:14px 16px;animation:bannerDrop .4s cubic-bezier(.34,1.56,.64,1);}
+  #audio-player.visible{display:block;}
+  .audio-player-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .audio-on-air-dot{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green-glow);animation:pulse 1s infinite;flex-shrink:0;}
+  .audio-on-air-label{font-size:0.75rem;font-weight:700;color:var(--green);letter-spacing:2px;text-transform:uppercase;flex:1;}
+  .audio-property{font-size:0.72rem;color:var(--muted);}
+  .audio-controls{display:flex;align-items:center;gap:12px;}
+  #play-pause-btn{background:var(--green);border:none;border-radius:8px;color:var(--black);font-size:0.85rem;font-weight:700;padding:9px 18px;cursor:pointer;transition:all .2s;flex-shrink:0;}
+  #play-pause-btn:hover{background:#00c060;}
+  .audio-vol-row{display:flex;align-items:center;gap:8px;flex:1;}
+  .audio-vol-label{font-size:0.7rem;color:var(--muted);}
+  #guest-vol{-webkit-appearance:none;width:100%;height:4px;background:var(--border);border-radius:4px;outline:none;cursor:pointer;}
+  #guest-vol::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--green);cursor:pointer;}
+
+  /* HOT SEAT SPOTLIGHT */
+  .hs-spotlight{margin:14px 16px 0;background:var(--panel);border:2px solid var(--red);border-radius:16px;padding:20px;text-align:center;background-image:radial-gradient(ellipse at 50% 0%,#cd181f18 0%,transparent 70%);animation:spotlightPulse 3s ease-in-out infinite;}
+  @keyframes spotlightPulse{0%,100%{box-shadow:0 0 20px var(--red-glow)}50%{box-shadow:0 0 40px #cd181f60}}
+  .spotlight-eyebrow{font-size:0.68rem;font-weight:700;letter-spacing:3px;color:var(--red);text-transform:uppercase;margin-bottom:8px;}
+  .spotlight-prize{font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:800;color:var(--gold);text-shadow:0 0 20px var(--gold-glow);margin-bottom:6px;}
+  .spotlight-sub{font-size:0.82rem;color:var(--muted);line-height:1.5;margin-bottom:12px;}
+  .spotlight-countdown{font-family:'Playfair Display',serif;font-size:2.4rem;font-weight:800;color:var(--red);text-shadow:0 0 20px var(--red-glow);}
+  .spotlight-countdown-label{font-size:0.68rem;color:var(--muted);letter-spacing:2px;margin-top:2px;}
+
+  /* ALERTS FEED */
+  .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .section-title{font-size:0.7rem;font-weight:700;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+  .alerts-feed{display:flex;flex-direction:column;gap:8px;}
+  .alert-card{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:var(--radius);padding:14px 16px;animation:slideIn .3s ease;}
+  .alert-card.hotseat{border-left-color:var(--red);}
+  .alert-card.jackpot{border-left-color:var(--green);}
+  .alert-card.tournament{border-left-color:#b87fe8;}
+  @keyframes slideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .alert-type{font-size:0.68rem;font-weight:700;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
+  .alert-msg{font-size:0.92rem;font-weight:600;line-height:1.5;}
+  .alert-time{font-size:0.68rem;color:var(--muted);margin-top:6px;}
+  .empty-alerts{text-align:center;padding:28px 20px;color:var(--muted);font-size:0.85rem;border:1px dashed var(--border);border-radius:var(--radius);}
+
+  /* REWARDS STRIP */
+  .rewards-strip{margin:0 16px;background:linear-gradient(135deg,var(--purple) 0%,#2a1545 100%);border:1px solid #6a2a90;border-radius:var(--radius);padding:14px 16px;display:flex;align-items:center;gap:12px;}
+  .rewards-icon{font-size:1.4rem;}
+  .rewards-text{font-size:0.82rem;font-weight:700;color:#e0c8f0;line-height:1.4;}
+  .rewards-text strong{color:var(--gold);}
+
+  .section{padding:16px 16px 8px;}
+  .divider{height:1px;background:var(--border);margin:0 16px 16px;}
+  .safe-bottom{height:24px;}
+</style>
+</head>
+<body>
+
+<!-- Ticker -->
+<div id="ticker-bar">
+  <div class="ticker-track">
+    <span class="ticker-text" id="ticker-text-1">HotSeat · Horseshoe Lake Charles</span>
+    <span class="ticker-text" id="ticker-text-2">HotSeat · Horseshoe Lake Charles</span>
+  </div>
+</div>
+
+<!-- Banner container -->
+<div id="banner-container"></div>
+
+<!-- Header -->
+<header>
+  <div class="header-top">
+    <div>
+      <div class="logo">HotSeat</div>
+      <div class="property-name">Horseshoe Lake Charles</div>
+    </div>
+    <div class="live-pill"><div class="live-dot"></div>Floor Live</div>
+  </div>
+  <div class="section-chips">
+    <button class="chip active" onclick="selectChip(this,'Main Floor')">🎰 Main Floor</button>
+    <button class="chip" onclick="selectChip(this,'High Limit')">💎 High Limit</button>
+    <button class="chip" onclick="selectChip(this,'Poker Room')">🃏 Poker Room</button>
+    <button class="chip" onclick="selectChip(this,'Tournament')">🏆 Tournament</button>
+  </div>
+</header>
+
+<!-- Live Audio Player (hidden until stream fires) -->
+<div id="audio-player">
+  <div class="audio-player-header">
+    <div class="audio-on-air-dot"></div>
+    <div class="audio-on-air-label">Floor Director — Live</div>
+    <div class="audio-property">Horseshoe Lake Charles</div>
+  </div>
+  <div class="audio-controls">
+    <button id="play-pause-btn" onclick="toggleGuestAudio()">▶ Listen Live</button>
+    <div class="audio-vol-row">
+      <span class="audio-vol-label">Vol</span>
+      <input type="range" id="guest-vol" min="0" max="100" value="80" oninput="setGuestVol(this.value)"/>
+    </div>
+  </div>
+</div>
+
+<!-- Hot Seat Spotlight -->
+<div class="hs-spotlight">
+  <div class="spotlight-eyebrow">🔥 Next Hot Seat Drawing</div>
+  <div class="spotlight-prize" id="hs-prize-display">$500 Cash Prize</div>
+  <div class="spotlight-sub">Stay in your seat. A random machine wins every 30 minutes.</div>
+  <div class="spotlight-countdown" id="hs-countdown">30:00</div>
+  <div class="spotlight-countdown-label">UNTIL NEXT DRAWING</div>
+</div>
+
+<!-- Alerts Feed -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">📡 Floor Alerts</div>
+  </div>
+  <div class="alerts-feed" id="alerts-feed">
+    <div class="alert-card">
+      <div class="alert-type">🎁 Promotion</div>
+      <div class="alert-msg">DOUBLE POINTS now through midnight — swipe your Caesars Rewards card on every play.</div>
+      <div class="alert-time">Tonight · All Sections</div>
+    </div>
+    <div class="alert-card tournament">
+      <div class="alert-type">🏆 Tournament</div>
+      <div class="alert-msg">Slot Tournament registration closes at 9pm. See the tournament desk to secure your seat.</div>
+      <div class="alert-time">8:14 PM · Tournament</div>
+    </div>
+    <div class="alert-card">
+      <div class="alert-type">📣 General</div>
+      <div class="alert-msg">Welcome to Horseshoe Lake Charles. Watch this screen for hot seat drawings, jackpot alerts, and exclusive promotions all night.</div>
+      <div class="alert-time">7:00 PM · All Sections</div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- Caesars Rewards -->
+<div class="rewards-strip">
+  <div class="rewards-icon">👑</div>
+  <div class="rewards-text"><strong>Caesars Rewards</strong> — Earn tier credits on every spin. Diamond and Platinum members receive priority host service and exclusive promotions.</div>
+</div>
+
+<div class="safe-bottom"></div>
+
+<!-- Hidden audio element for live stream -->
+<audio id="guest-audio" style="display:none;"></audio>
+
+<script>
+  let selectedSection = 'Main Floor';
+  let activeTicker = null;
+  let guestAudioPlaying = false;
+  let currentStreamUrl = '';
+
+  // ── SECTION CHIPS ──
+  function selectChip(el, section) {
+    document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+    el.classList.add('active'); selectedSection = section;
+  }
+
+  // ── HOT SEAT COUNTDOWN (demo — starts from 30 min) ──
+  let hsSeconds = 1800;
+  setInterval(() => {
+    hsSeconds--;
+    if (hsSeconds < 0) { hsSeconds = 1800; }
+    const m = String(Math.floor(hsSeconds/60)).padStart(2,'0');
+    const s = String(hsSeconds%60).padStart(2,'0');
+    document.getElementById('hs-countdown').textContent = `${m}:${s}`;
+    if (hsSeconds === 0) triggerDemoHotSeat();
+  }, 1000);
+
+  function triggerDemoHotSeat() {
+    const machine = Math.floor(Math.random()*800+1000);
+    showBanner({ type:'Hot Seat', msg:`🔥 HOT SEAT — Machine #${machine} on the Main Floor! $500 Cash. Is that you? Stay in your seat!`, isHotSeat:true });
+    showTicker(`🔥 HOT SEAT WINNER — Machine #${machine} · Main Floor · $500 Cash Prize — Congratulations!`);
+    addAlert({ type:'Hot Seat', typeClass:'hotseat', typeLabel:'🔥 Hot Seat', msg:`HOT SEAT DRAWING — Machine #${machine} wins $500 Cash! If that's your machine stay seated — your host is on the way.`, section:'Main Floor' });
+  }
+
+  // ── TICKER ──
+  function showTicker(msg) {
+    document.getElementById('ticker-text-1').textContent = msg;
+    document.getElementById('ticker-text-2').textContent = msg;
+    document.getElementById('ticker-bar').classList.add('visible');
+    clearTimeout(activeTicker);
+    activeTicker = setTimeout(() => document.getElementById('ticker-bar').classList.remove('visible'), 28000);
+  }
+
+  // ── BANNER ──
+  function showBanner(alert) {
+    const container = document.getElementById('banner-container');
+    const div = document.createElement('div');
+    div.className = `alert-banner${alert.isHotSeat?' hotseat':''}`;
+    div.innerHTML = `<div class="banner-type">${alert.isHotSeat?'🔥':'📣'} ${alert.type}</div><div class="banner-msg">${escHtml(alert.msg)}</div><button class="banner-dismiss" onclick="this.closest('.alert-banner').remove()">Dismiss</button>`;
+    container.appendChild(div);
+    setTimeout(() => { if(div.parentNode) div.remove(); }, 14000);
+  }
+
+  // ── ADD ALERT TO FEED ──
+  function addAlert(a) {
+    const feed = document.getElementById('alerts-feed');
+    const time = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    feed.insertAdjacentHTML('afterbegin', `<div class="alert-card ${a.typeClass||''}"><div class="alert-type">${a.typeLabel}</div><div class="alert-msg">${escHtml(a.msg)}</div><div class="alert-time">${time} · ${escHtml(a.section)}</div></div>`);
+  }
+
+  // ── LIVE AUDIO ──
+  function showAudioPlayer(streamUrl) {
+    currentStreamUrl = streamUrl;
+    document.getElementById('audio-player').classList.add('visible');
+  }
+
+  function toggleGuestAudio() {
+    const audio = document.getElementById('guest-audio');
+    const btn   = document.getElementById('play-pause-btn');
+    if (guestAudioPlaying) {
+      audio.pause(); guestAudioPlaying=false; btn.textContent='▶ Listen Live';
+    } else {
+      audio.src = currentStreamUrl;
+      audio.volume = document.getElementById('guest-vol').value/100;
+      audio.play().then(() => { guestAudioPlaying=true; btn.textContent='⏸ Pause'; })
+        .catch(() => { btn.textContent='▶ Listen Live'; });
+    }
+  }
+
+  function setGuestVol(v) { document.getElementById('guest-audio').volume=v/100; }
+
+  // ── DEMO SEQUENCES ──
+  // Welcome banner at 3s
+  setTimeout(() => {
+    showBanner({ type:'Welcome', msg:'👋 Welcome to Horseshoe Lake Charles. Watch for hot seat drawings, jackpot alerts, and exclusive promotions — all delivered here in real time.', isHotSeat:false });
+  }, 3000);
+
+  // Tournament ticker at 9s
+  setTimeout(() => {
+    showTicker('🏆 TOURNAMENT UPDATE — Current leader: Player #T-12 · 4,820 points · Tournament ends in 47 minutes');
+  }, 9000);
+
+  // Jackpot alert at 18s
+  setTimeout(() => {
+    showBanner({ type:'Jackpot Alert', msg:'💰 JACKPOT HIT on the Main Floor — machine #1847 just won $22,450! Congratulations to our lucky guest!', isHotSeat:false });
+    addAlert({ typeClass:'jackpot', typeLabel:'💰 Jackpot', msg:'JACKPOT HIT — Machine #1847 wins $22,450! Congratulations to our lucky guest on the Main Floor!', section:'Main Floor' });
+  }, 18000);
+
+  // Simulate live audio becoming available at 25s (demo)
+  setTimeout(() => {
+    showAudioPlayer(''); // In real use this would be the actual AzuraCast URL sent with the broadcast
+    showBanner({ type:'Live Audio', msg:'🎙️ Your floor director is now broadcasting live. Tap Listen Live below to hear the hot seat announcement.', isHotSeat:false });
+  }, 25000);
+
+  function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+</script>
+</body>
+</html>

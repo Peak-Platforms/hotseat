@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>HotSeat — Floor Controller · Horseshoe Lake Charles</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --red:#cd181f; --red-glow:#cd181f40; --red-dim:#a01018;
+    --gold:#f5cb5c; --gold-glow:#f5cb5c30; --gold-dim:#c9a030;
+    --purple:#481459; --black:#01000B;
+    --panel:#0d0c18; --panel2:#16152a; --panel3:#1e1d30;
+    --border:#2a2840; --text:#f0ede8; --muted:#7a7890;
+    --green:#00e676; --green-glow:#00e67630;
+    --amber:#ffab00; --radius:10px;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:var(--black);color:var(--text);min-height:100vh;display:flex;flex-direction:column;background-image:radial-gradient(ellipse at 10% 10%,#cd181f0a 0%,transparent 50%),radial-gradient(ellipse at 90% 90%,#48145920 0%,transparent 50%);}
+
+  /* PIN */
+  #pin-screen{position:fixed;inset:0;background:var(--black);background-image:radial-gradient(ellipse at 30% 30%,#cd181f12 0%,transparent 60%),radial-gradient(ellipse at 70% 70%,#48145925 0%,transparent 60%);display:flex;align-items:center;justify-content:center;z-index:999;}
+  .pin-box{text-align:center;max-width:360px;width:100%;background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:48px 44px;box-shadow:0 0 80px #cd181f15;}
+  .pin-logo{font-family:'Playfair Display',serif;font-size:2.6rem;font-weight:800;color:var(--gold);text-shadow:0 0 30px var(--gold-glow);letter-spacing:2px;margin-bottom:6px;}
+  .pin-property{font-size:0.72rem;font-weight:600;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-bottom:32px;}
+  .pin-label{font-size:0.72rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;}
+  #pin-input{width:100%;background:var(--panel2);border:2px solid var(--border);border-radius:10px;color:var(--gold);font-size:2.4rem;letter-spacing:16px;text-align:center;padding:14px;outline:none;font-family:'Playfair Display',serif;transition:border-color .2s;}
+  #pin-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-glow);}
+  #pin-btn{margin-top:20px;width:100%;background:var(--red);border:none;border-radius:10px;color:#fff;font-family:'DM Sans',sans-serif;font-weight:700;font-size:0.95rem;letter-spacing:3px;text-transform:uppercase;padding:14px;cursor:pointer;transition:all .2s;}
+  #pin-btn:hover{background:var(--red-dim);box-shadow:0 0 20px var(--red-glow);}
+  #pin-error{color:var(--red);font-size:0.82rem;margin-top:12px;height:18px;}
+
+  /* HEADER */
+  header{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;flex-wrap:wrap;gap:10px;}
+  .h-left{display:flex;align-items:center;gap:14px;}
+  .logo{font-family:'Playfair Display',serif;font-size:1.7rem;font-weight:800;color:var(--gold);text-shadow:0 0 20px var(--gold-glow);letter-spacing:1px;}
+  .property-tag{font-size:0.7rem;font-weight:600;color:var(--muted);letter-spacing:2px;text-transform:uppercase;border-left:1px solid var(--border);padding-left:14px;}
+  .h-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .live-badge{display:flex;align-items:center;gap:7px;background:#cd181f18;border:1px solid var(--red);border-radius:20px;padding:5px 12px;font-size:0.75rem;font-weight:700;color:var(--red);letter-spacing:2px;}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:var(--red);animation:pulse 1.2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .guest-count{font-size:0.8rem;color:var(--muted);}
+  .guest-count strong{color:var(--gold);}
+
+  /* AUDIO BAR */
+  #audio-bar{background:var(--panel2);border-bottom:2px solid var(--border);padding:10px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .audio-section-label{font-size:0.7rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+  .audio-status-row{display:flex;align-items:center;gap:8px;}
+  .audio-indicator{width:10px;height:10px;border-radius:50%;background:var(--muted);transition:all .3s;}
+  .audio-indicator.live{background:var(--green);box-shadow:0 0 10px var(--green-glow);animation:pulse 1.2s infinite;}
+  #audio-status-label{font-size:0.82rem;font-weight:700;color:var(--muted);transition:color .3s;}
+  #audio-status-label.live{color:var(--green);}
+  .go-live-btn{display:flex;align-items:center;gap:8px;background:transparent;border:2px solid var(--border);border-radius:8px;padding:8px 18px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:0.82rem;color:var(--muted);cursor:pointer;transition:all .2s;}
+  .go-live-btn:hover{border-color:var(--green);color:var(--green);}
+  .go-live-btn.on-air{border-color:var(--green);color:var(--green);background:var(--green-glow);}
+  .go-live-btn.on-air:hover{border-color:var(--red);color:var(--red);background:var(--red-glow);}
+  .stream-url-pill{background:var(--black);border:1px solid var(--border);border-radius:6px;padding:5px 12px;font-size:0.72rem;color:var(--muted);font-family:monospace;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .vol-control{display:flex;align-items:center;gap:8px;margin-left:auto;}
+  .vol-label{font-size:0.7rem;color:var(--muted);letter-spacing:1px;white-space:nowrap;}
+  #vol-slider{-webkit-appearance:none;width:90px;height:4px;background:var(--border);border-radius:4px;outline:none;cursor:pointer;}
+  #vol-slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--gold);cursor:pointer;}
+
+  /* SECTION BAR */
+  .section-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 24px;background:var(--panel2);border-bottom:1px solid var(--border);}
+  .section-label{font-size:0.7rem;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-right:6px;}
+  .section-btn{background:var(--black);border:2px solid var(--border);border-radius:8px;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:700;font-size:0.8rem;letter-spacing:1px;padding:7px 18px;cursor:pointer;transition:all .2s;}
+  .section-btn:hover{border-color:var(--gold);color:var(--gold);}
+  .section-btn.active{border-color:var(--gold);color:var(--black);background:var(--gold);}
+  .section-btn.all-btn.active{background:var(--red);border-color:var(--red);color:#fff;}
+
+  /* MAIN */
+  .main{display:grid;grid-template-columns:340px 1fr;flex:1;}
+  .col{padding:20px 24px;overflow-y:auto;max-height:calc(100vh - 168px);border-right:1px solid var(--border);}
+  .col:last-child{border-right:none;}
+  .col-title{font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;color:var(--gold);letter-spacing:1px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+  .col-badge{font-family:'DM Sans',sans-serif;background:var(--red);color:#fff;border-radius:20px;padding:2px 10px;font-size:0.72rem;font-weight:700;}
+
+  /* FLOOR STATS */
+  .floor-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
+  .floor-stat{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+  .floor-stat-num{font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:800;color:var(--gold);line-height:1;}
+  .floor-stat-label{font-size:0.68rem;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:4px;}
+
+  /* HOT SEAT MANAGER */
+  .hs-manager{background:var(--panel2);border:2px solid var(--red);border-radius:12px;padding:18px 20px;margin-bottom:18px;background-image:radial-gradient(ellipse at 80% 20%,#cd181f12 0%,transparent 60%);}
+  .hs-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .hs-title{font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--red);}
+  .hs-prize-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+  .hs-prize-label{font-size:0.72rem;color:var(--muted);white-space:nowrap;}
+  .hs-prize-input{flex:1;background:var(--black);border:2px solid var(--border);border-radius:8px;color:var(--gold);font-family:'Playfair Display',serif;font-size:0.95rem;font-weight:700;padding:7px 12px;outline:none;transition:border-color .2s;}
+  .hs-prize-input:focus{border-color:var(--gold);}
+  .hs-timer{font-family:'Playfair Display',serif;font-size:3rem;font-weight:800;color:var(--red);text-shadow:0 0 20px var(--red-glow);text-align:center;margin:8px 0 12px;}
+  .hs-timer.urgent{color:#ff4040;animation:timerFlash .5s infinite;}
+  @keyframes timerFlash{0%,100%{opacity:1}50%{opacity:.4}}
+  .hs-btns{display:flex;gap:8px;}
+  .hs-btn{flex:1;padding:9px;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:0.78rem;cursor:pointer;transition:all .2s;}
+  .hs-btn-start{background:var(--red);color:#fff;}
+  .hs-btn-start:hover{background:var(--red-dim);}
+  .hs-btn-secondary{background:var(--panel3);border:1px solid var(--border);color:var(--muted);}
+  .hs-btn-secondary:hover{border-color:var(--gold);color:var(--gold);}
+  .hs-btn-fire{background:var(--panel3);border:1px solid var(--red);color:var(--red);}
+  .hs-btn-fire:hover{background:var(--red);color:#fff;}
+
+  /* BROADCAST LOG */
+  .fire-log{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;}
+  .log-item{background:var(--black);border:1px solid var(--border);border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;gap:10px;font-size:0.75rem;}
+  .log-text{color:var(--text);flex:1;}
+  .log-meta{color:var(--muted);text-align:right;white-space:nowrap;font-size:0.7rem;}
+  .log-tag{display:inline-block;border-radius:4px;padding:1px 6px;font-size:0.66rem;font-weight:700;letter-spacing:1px;margin-right:4px;}
+  .tag-hs{background:#cd181f30;color:var(--red);}
+  .tag-jackpot{background:#00e67620;color:var(--green);}
+  .tag-promo{background:#f5cb5c25;color:var(--gold);}
+  .tag-tournament{background:#48145930;color:#b87fe8;}
+  .tag-general{background:#2a284030;color:var(--muted);}
+
+  /* BROADCAST CONTROLS */
+  .field-label{font-size:0.7rem;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:8px;}
+  .alert-types{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px;}
+  .alert-type-btn{background:var(--black);border:2px solid var(--border);border-radius:10px;padding:11px 6px;cursor:pointer;text-align:center;transition:all .2s;}
+  .alert-type-btn .at-icon{font-size:1.2rem;display:block;margin-bottom:4px;}
+  .alert-type-btn .at-label{font-size:0.72rem;font-weight:700;color:var(--muted);}
+  .alert-type-btn.active{border-color:var(--gold);background:var(--gold-glow);}
+  .alert-type-btn.active .at-label{color:var(--gold);}
+  .alert-type-btn[data-type="Hot Seat"].active{border-color:var(--red);background:var(--red-glow);}
+  .alert-type-btn[data-type="Hot Seat"].active .at-label{color:var(--red);}
+  .alert-type-btn[data-type="Jackpot"].active{border-color:var(--green);background:var(--green-glow);}
+  .alert-type-btn[data-type="Jackpot"].active .at-label{color:var(--green);}
+
+  .broadcast-textarea{width:100%;background:var(--black);border:2px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.92rem;padding:12px 14px;outline:none;resize:vertical;min-height:80px;transition:border-color .2s;margin-bottom:14px;}
+  .broadcast-textarea:focus{border-color:var(--gold);}
+
+  .toggles-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;}
+  .toggle-label{font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);}
+  .toggle-btn{display:flex;align-items:center;gap:7px;background:var(--black);border:2px solid var(--border);border-radius:8px;padding:7px 12px;font-size:0.75rem;font-weight:700;color:var(--muted);cursor:pointer;transition:all .2s;}
+  .toggle-btn.on{border-color:var(--gold);color:var(--gold);background:var(--gold-glow);}
+  .toggle-btn.audio-on{border-color:var(--green);color:var(--green);background:var(--green-glow);}
+  .toggle-dot{width:7px;height:7px;border-radius:50%;background:currentColor;}
+
+  .quick-messages{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
+  .quick-msg-btn{background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:5px 11px;font-size:0.75rem;color:var(--muted);cursor:pointer;transition:all .2s;}
+  .quick-msg-btn:hover{border-color:var(--gold);color:var(--gold);}
+
+  #fire-btn{width:100%;padding:17px;background:var(--red);border:none;border-radius:12px;color:#fff;font-family:'DM Sans',sans-serif;font-weight:700;font-size:0.95rem;letter-spacing:3px;text-transform:uppercase;cursor:pointer;transition:all .2s;box-shadow:0 4px 24px var(--red-glow);position:relative;overflow:hidden;}
+  #fire-btn::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,#ffffff15 0%,transparent 60%);}
+  #fire-btn:hover{background:var(--red-dim);box-shadow:0 4px 36px #cd181f60;transform:translateY(-1px);}
+  #fire-btn:disabled{background:var(--panel2);box-shadow:none;transform:none;cursor:not-allowed;}
+  #fire-status{text-align:center;font-size:0.8rem;min-height:20px;margin-top:8px;color:var(--green);}
+
+  /* STREAM CONFIG */
+  .stream-config{margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
+  .stream-input-row{display:flex;gap:8px;margin-top:8px;}
+  .stream-input{flex:1;background:var(--black);border:2px solid var(--border);border-radius:8px;color:var(--muted);font-size:0.78rem;padding:8px 10px;outline:none;font-family:monospace;transition:border-color .2s;}
+  .stream-input:focus{border-color:var(--green);}
+  .stream-test-btn{background:var(--panel2);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:0.75rem;font-weight:700;padding:8px 14px;cursor:pointer;white-space:nowrap;transition:all .2s;}
+  .stream-test-btn:hover{border-color:var(--green);color:var(--green);}
+  .stream-hint{font-size:0.7rem;color:var(--muted);margin-top:6px;line-height:1.5;}
+
+  ::-webkit-scrollbar{width:4px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+
+  .bottom-bar{display:flex;align-items:center;justify-content:space-between;padding:7px 24px;background:var(--panel);border-top:1px solid var(--border);font-size:0.72rem;color:var(--muted);flex-wrap:wrap;gap:8px;}
+  .bottom-bar strong{color:var(--gold);}
+</style>
+</head>
+<body>
+
+<!-- PIN -->
+<div id="pin-screen">
+  <div class="pin-box">
+    <div class="pin-logo">HotSeat</div>
+    <div class="pin-property">Horseshoe Lake Charles · Floor Controller</div>
+    <div class="pin-label">Director PIN</div>
+    <input type="password" id="pin-input" maxlength="4" placeholder="••••" inputmode="numeric"/>
+    <button id="pin-btn">Enter Floor</button>
+    <div id="pin-error"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none;flex-direction:column;min-height:100vh;">
+
+  <header>
+    <div class="h-left">
+      <div class="logo">HotSeat</div>
+      <div class="property-tag">Horseshoe Lake Charles</div>
+    </div>
+    <div class="h-right">
+      <div class="guest-count">Guests: <strong id="guest-count">247</strong></div>
+      <div class="live-badge"><div class="live-dot"></div>Floor Live</div>
+      <div style="font-size:0.75rem;color:var(--muted);font-variant-numeric:tabular-nums;" id="session-time">00:00</div>
+    </div>
+  </header>
+
+  <!-- AUDIO BAR -->
+  <div id="audio-bar">
+    <div class="audio-section-label">🎙️ Live Audio Broadcast</div>
+    <div class="audio-status-row">
+      <div class="audio-indicator" id="audio-dot"></div>
+      <span id="audio-status-label">Off Air</span>
+    </div>
+    <button class="go-live-btn" id="go-live-btn" onclick="toggleOnAir()">
+      <span id="live-btn-icon">🎙️</span>
+      <span id="live-btn-text">Go On Air</span>
+    </button>
+    <div class="stream-url-pill" id="stream-pill">No stream configured</div>
+    <div class="vol-control">
+      <span class="vol-label">Monitor</span>
+      <input type="range" id="vol-slider" min="0" max="100" value="60" oninput="setMonitorVol(this.value)"/>
+    </div>
+  </div>
+
+  <!-- SECTION BAR -->
+  <div class="section-bar">
+    <span class="section-label">Section:</span>
+    <button class="section-btn all-btn active" onclick="selectSection(this,'ALL')">📣 All Sections</button>
+    <button class="section-btn" onclick="selectSection(this,'Main Floor')">🎰 Main Floor</button>
+    <button class="section-btn" onclick="selectSection(this,'High Limit')">💎 High Limit</button>
+    <button class="section-btn" onclick="selectSection(this,'Poker Room')">🃏 Poker Room</button>
+    <button class="section-btn" onclick="selectSection(this,'Tournament')">🏆 Tournament</button>
+  </div>
+
+  <div class="main" style="flex:1;">
+
+    <!-- LEFT COL: Dashboard + Hot Seat Manager -->
+    <div class="col">
+
+      <div class="col-title">Floor Dashboard</div>
+      <div class="floor-stats">
+        <div class="floor-stat">
+          <div class="floor-stat-num" id="stat-guests">247</div>
+          <div class="floor-stat-label">Guests Connected</div>
+        </div>
+        <div class="floor-stat">
+          <div class="floor-stat-num" id="stat-fired">0</div>
+          <div class="floor-stat-label">Broadcasts Fired</div>
+        </div>
+        <div class="floor-stat">
+          <div class="floor-stat-num" id="stat-hs">3</div>
+          <div class="floor-stat-label">Hot Seats Today</div>
+        </div>
+        <div class="floor-stat">
+          <div class="floor-stat-num" id="stat-time">00:00</div>
+          <div class="floor-stat-label">Session Time</div>
+        </div>
+      </div>
+
+      <!-- Hot Seat Manager -->
+      <div class="hs-manager">
+        <div class="hs-header">
+          <div class="hs-title">🔥 Hot Seat Manager</div>
+        </div>
+        <div class="hs-prize-row">
+          <span class="hs-prize-label">Prize:</span>
+          <input class="hs-prize-input" id="hs-prize" type="text" value="$500 Cash" placeholder="Prize amount"/>
+        </div>
+        <div class="hs-timer" id="hs-display">30:00</div>
+        <div class="hs-btns">
+          <button class="hs-btn hs-btn-start" id="hs-start-btn" onclick="toggleHsTimer()">▶ Start</button>
+          <button class="hs-btn hs-btn-secondary" onclick="resetHsTimer()">↺ Reset</button>
+          <button class="hs-btn hs-btn-fire" onclick="fireHotSeatNow()">🔥 Fire Now</button>
+        </div>
+      </div>
+
+      <!-- Log -->
+      <div class="col-title">Broadcast Log <span class="col-badge" id="log-count">0</span></div>
+      <div class="fire-log" id="fire-log">
+        <div style="text-align:center;color:var(--muted);font-size:0.78rem;padding:14px;">Nothing fired yet this session.</div>
+      </div>
+    </div>
+
+    <!-- RIGHT COL: Broadcast Controls -->
+    <div class="col">
+      <div class="col-title">Broadcast Controls</div>
+
+      <div style="margin-bottom:18px;">
+        <div class="field-label">Alert Type</div>
+        <div class="alert-types">
+          <button class="alert-type-btn active" data-type="Hot Seat"><span class="at-icon">🔥</span><span class="at-label">Hot Seat</span></button>
+          <button class="alert-type-btn" data-type="Jackpot"><span class="at-icon">💰</span><span class="at-label">Jackpot</span></button>
+          <button class="alert-type-btn" data-type="Promotion"><span class="at-icon">🎁</span><span class="at-label">Promotion</span></button>
+          <button class="alert-type-btn" data-type="Tournament"><span class="at-icon">🏆</span><span class="at-label">Tournament</span></button>
+          <button class="alert-type-btn" data-type="VIP"><span class="at-icon">👑</span><span class="at-label">VIP</span></button>
+          <button class="alert-type-btn" data-type="General"><span class="at-icon">📣</span><span class="at-label">General</span></button>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <div class="field-label">Message</div>
+        <textarea class="broadcast-textarea" id="broadcast-msg" placeholder="Type your floor broadcast…"></textarea>
+      </div>
+
+      <div class="toggles-row">
+        <span class="toggle-label">Ticker</span>
+        <button class="toggle-btn" id="ticker-toggle" onclick="toggleOpt('ticker')"><span class="toggle-dot"></span>Off</button>
+        <span class="toggle-label">Sound</span>
+        <button class="toggle-btn" id="sound-toggle" onclick="toggleOpt('sound')"><span class="toggle-dot"></span>Off</button>
+        <span class="toggle-label">Live Audio</span>
+        <button class="toggle-btn" id="audio-toggle" onclick="toggleOpt('audio')" title="Send live stream URL to guests with this alert"><span class="toggle-dot"></span>Off</button>
+      </div>
+
+      <div class="field-label">Quick Fire</div>
+      <div class="quick-messages">
+        <button class="quick-msg-btn" data-msg="🔥 HOT SEAT DRAWING — Check your machine number now! Winner announced.">Hot Seat Drawing</button>
+        <button class="quick-msg-btn" data-msg="💰 JACKPOT ALERT on the Main Floor! Congratulations to our lucky winner!">Jackpot Alert</button>
+        <button class="quick-msg-btn" data-msg="🎁 DOUBLE POINTS — Next 30 minutes. Swipe your Caesars Rewards card now.">Double Points</button>
+        <button class="quick-msg-btn" data-msg="🏆 TOURNAMENT UPDATE — Live standings posted. Check the leaderboard now.">Tournament Update</button>
+        <button class="quick-msg-btn" data-msg="👑 VIP EVENT tonight at 9pm in the High Limit Lounge. Diamond members only.">VIP Event</button>
+        <button class="quick-msg-btn" data-msg="⏰ Last call for tonight's tournament. Registration closes in 10 minutes.">Last Call</button>
+        <button class="quick-msg-btn" data-msg="🌟 FREE PLAY offer active for the next 20 minutes. See your host to claim.">Free Play</button>
+        <button class="quick-msg-btn" data-msg="🎰 NEW machines just opened on the Main Floor — come check them out!">New Machines</button>
+      </div>
+
+      <button id="fire-btn" onclick="fireBroadcast()">🔥 Fire Broadcast</button>
+      <div id="fire-status"></div>
+
+      <!-- AzuraCast config -->
+      <div class="stream-config">
+        <div class="field-label">AzuraCast Live Stream URL</div>
+        <div class="stream-input-row">
+          <input class="stream-input" type="text" id="stream-url-input"
+            placeholder="https://your-azuracast.com/radio/8000/radio.mp3"
+            oninput="updateStreamUrl(this.value)"/>
+          <button class="stream-test-btn" onclick="testStream()">Test</button>
+        </div>
+        <div class="stream-hint">
+          Paste your AzuraCast stream URL. When <strong style="color:var(--green)">Live Audio</strong> is enabled on a broadcast, guests receive the stream URL and hear your voice live on their device. Toggle <strong style="color:var(--green)">Go On Air</strong> above to start your microphone feed.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="bottom-bar">
+    <div>Session: <strong id="session-display">00:00</strong></div>
+    <div>HotSeat · <strong>Horseshoe Lake Charles</strong></div>
+    <div id="section-display">All Sections</div>
+  </div>
+</div>
+
+<audio id="monitor-audio" style="display:none;"></audio>
+
+<script>
+  const CORRECT_PIN = '2025';
+  let selectedSection = 'ALL';
+  let selectedType    = 'Hot Seat';
+  let tickerOn = false, soundOn = false, audioOn = false, onAir = false;
+  let sessionStart = Date.now();
+  let broadcastCount = 0, hsCount = 3;
+  let hsSeconds = 1800, hsRunning = false, hsInterval = null;
+  let streamUrl = '';
+
+  // ── PIN ──
+  document.getElementById('pin-btn').addEventListener('click', attemptPin);
+  document.getElementById('pin-input').addEventListener('keydown', e => { if(e.key==='Enter') attemptPin(); });
+  function attemptPin() {
+    if (document.getElementById('pin-input').value === CORRECT_PIN) {
+      document.getElementById('pin-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'flex';
+      startSessionTimer();
+      document.querySelectorAll('.quick-msg-btn').forEach(b => b.addEventListener('click', () => {
+        document.getElementById('broadcast-msg').value = b.dataset.msg;
+      }));
+      document.querySelectorAll('.alert-type-btn').forEach(b => b.addEventListener('click', () => {
+        document.querySelectorAll('.alert-type-btn').forEach(x => x.classList.remove('active'));
+        b.classList.add('active'); selectedType = b.dataset.type;
+      }));
+    } else {
+      document.getElementById('pin-error').textContent = 'Incorrect PIN.';
+      document.getElementById('pin-input').value = '';
+    }
+  }
+
+  // ── SECTION ──
+  function selectSection(btn, section) {
+    document.querySelectorAll('.section-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active'); selectedSection = section;
+    document.getElementById('section-display').textContent = section === 'ALL' ? 'All Sections' : section;
+  }
+
+  // ── TOGGLES ──
+  function toggleOpt(opt) {
+    const map = { ticker: ['ticker-toggle', 'tickerOn'], sound: ['sound-toggle', 'soundOn'], audio: ['audio-toggle', 'audioOn'] };
+    const [id] = map[opt];
+    const btn = document.getElementById(id);
+    if (opt==='ticker') { tickerOn=!tickerOn; btn.classList.toggle('on',tickerOn); btn.innerHTML=`<span class="toggle-dot"></span>${tickerOn?'On':'Off'}`; }
+    if (opt==='sound')  { soundOn=!soundOn;   btn.classList.toggle('on',soundOn);  btn.innerHTML=`<span class="toggle-dot"></span>${soundOn?'On':'Off'}`; }
+    if (opt==='audio')  {
+      audioOn=!audioOn;
+      btn.classList.toggle('audio-on',audioOn);
+      btn.innerHTML=`<span class="toggle-dot"></span>${audioOn?'On':'Off'}`;
+      if (audioOn && !streamUrl) { audioOn=false; btn.classList.remove('audio-on'); btn.innerHTML='<span class="toggle-dot"></span>Off'; alert('Enter your AzuraCast stream URL below first.'); }
+    }
+  }
+
+  // ── FIRE ──
+  function fireBroadcast() {
+    const msg = document.getElementById('broadcast-msg').value.trim();
+    const btn = document.getElementById('fire-btn');
+    const status = document.getElementById('fire-status');
+    if (!msg) { status.textContent='⚠️ Enter a message first.'; status.style.color='var(--amber)'; return; }
+    btn.disabled = true;
+    status.textContent='Broadcasting…'; status.style.color='var(--muted)';
+    setTimeout(() => {
+      broadcastCount++;
+      document.getElementById('stat-fired').textContent = broadcastCount;
+      const section = selectedSection==='ALL' ? 'All Sections' : selectedSection;
+      const extras = [tickerOn?'📺':'', soundOn?'🔊':'', audioOn?'🎙️ Audio':''].filter(Boolean).join(' ');
+      status.textContent = `✅ Fired to ${section} ${extras}`;
+      status.style.color = 'var(--green)';
+      addLog({ type:selectedType, message:msg, section });
+      document.getElementById('broadcast-msg').value = '';
+      btn.disabled = false;
+      setTimeout(() => { status.textContent=''; }, 4000);
+    }, 500);
+  }
+
+  function addLog(entry) {
+    const log = document.getElementById('fire-log');
+    const placeholder = log.querySelector('div[style*="text-align"]');
+    if (placeholder) log.innerHTML = '';
+    const tagMap = {'Hot Seat':'tag-hs','Jackpot':'tag-jackpot','Promotion':'tag-promo','Tournament':'tag-tournament','VIP':'tag-promo'};
+    const tagClass = tagMap[entry.type]||'tag-general';
+    log.insertAdjacentHTML('afterbegin', `<div class="log-item"><div class="log-text"><span class="log-tag ${tagClass}">${entry.type}</span>${escHtml(entry.message)}</div><div class="log-meta">${escHtml(entry.section)}<br/>${now()}</div></div>`);
+    document.getElementById('log-count').textContent = log.querySelectorAll('.log-item').length;
+  }
+
+  // ── HOT SEAT TIMER ──
+  function toggleHsTimer() {
+    if (hsRunning) {
+      clearInterval(hsInterval); hsRunning=false;
+      document.getElementById('hs-start-btn').textContent='▶ Resume';
+    } else {
+      hsRunning=true;
+      document.getElementById('hs-start-btn').textContent='⏸ Pause';
+      hsInterval = setInterval(() => {
+        hsSeconds--;
+        updateHsDisplay();
+        if (hsSeconds<=0) { clearInterval(hsInterval); hsRunning=false; document.getElementById('hs-start-btn').textContent='▶ Start'; fireHotSeatNow(); }
+      }, 1000);
+    }
+  }
+
+  function resetHsTimer() {
+    clearInterval(hsInterval); hsRunning=false; hsSeconds=1800;
+    updateHsDisplay(); document.getElementById('hs-start-btn').textContent='▶ Start';
+    document.getElementById('hs-display').classList.remove('urgent');
+  }
+
+  function updateHsDisplay() {
+    const m = String(Math.floor(hsSeconds/60)).padStart(2,'0');
+    const s = String(hsSeconds%60).padStart(2,'0');
+    document.getElementById('hs-display').textContent = `${m}:${s}`;
+    document.getElementById('hs-display').classList.toggle('urgent', hsSeconds<=60);
+  }
+
+  function fireHotSeatNow() {
+    const prize = document.getElementById('hs-prize').value||'$500 Cash';
+    const machine = Math.floor(Math.random()*800+1000);
+    const section = selectedSection==='ALL'?'Main Floor':selectedSection;
+    document.getElementById('broadcast-msg').value = `🔥 HOT SEAT DRAWING — Machine #${machine} on the ${section}! ${prize} prize. Is that you? Stay in your seat!`;
+    document.querySelectorAll('.alert-type-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelector('.alert-type-btn[data-type="Hot Seat"]').classList.add('active');
+    selectedType='Hot Seat'; hsCount++;
+    document.getElementById('stat-hs').textContent=hsCount;
+    fireBroadcast(); resetHsTimer();
+  }
+
+  // ── AUDIO / AZURACAST ──
+  function updateStreamUrl(url) {
+    streamUrl = url.trim();
+    document.getElementById('stream-pill').textContent = streamUrl ? `Stream: ${streamUrl.replace('https://','').substring(0,36)}…` : 'No stream configured';
+  }
+
+  function toggleOnAir() {
+    if (!streamUrl) { alert('Enter your AzuraCast stream URL first.'); return; }
+    onAir = !onAir;
+    const dot   = document.getElementById('audio-dot');
+    const label = document.getElementById('audio-status-label');
+    const btn   = document.getElementById('go-live-btn');
+    const icon  = document.getElementById('live-btn-icon');
+    const text  = document.getElementById('live-btn-text');
+    const audio = document.getElementById('monitor-audio');
+    if (onAir) {
+      dot.classList.add('live'); label.textContent='On Air'; label.classList.add('live');
+      btn.classList.add('on-air'); icon.textContent='🔴'; text.textContent='End Broadcast';
+      audio.src=streamUrl; audio.volume=document.getElementById('vol-slider').value/100;
+      audio.play().catch(()=>{});
+    } else {
+      dot.classList.remove('live'); label.textContent='Off Air'; label.classList.remove('live');
+      btn.classList.remove('on-air'); icon.textContent='🎙️'; text.textContent='Go On Air';
+      audio.pause(); audio.src='';
+    }
+  }
+
+  function testStream() {
+    const url = document.getElementById('stream-url-input').value.trim();
+    if (!url) { alert('Enter a stream URL first.'); return; }
+    const audio = document.getElementById('monitor-audio');
+    audio.src=url; audio.volume=document.getElementById('vol-slider').value/100;
+    audio.play().then(()=>alert('✅ Stream connected! Audio is live in monitor.')).catch(()=>alert('❌ Could not connect. Check the URL and try again.'));
+  }
+
+  function setMonitorVol(v) { document.getElementById('monitor-audio').volume=v/100; }
+
+  // ── SESSION TIMER ──
+  function startSessionTimer() {
+    setInterval(() => {
+      const e = Math.floor((Date.now()-sessionStart)/1000);
+      const t = `${String(Math.floor(e/60)).padStart(2,'0')}:${String(e%60).padStart(2,'0')}`;
+      document.getElementById('session-time').textContent=t;
+      document.getElementById('session-display').textContent=t;
+      document.getElementById('stat-time').textContent=t;
+    }, 1000);
+  }
+
+  function now() { return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
+  function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+</script>
+</body>
+</html>
