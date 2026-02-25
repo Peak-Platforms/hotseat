@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>HotSeat — Guest View Tutorial</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  @page { size: letter portrait; margin: 0; }
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none !important; }
+    .page { box-shadow: none !important; }
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #1a1a2e;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 32px 16px; min-height: 100vh;
+  }
+
+  .print-btn {
+    margin-bottom: 20px;
+    background: #cd181f; border: none; border-radius: 8px;
+    color: #fff; font-family: 'DM Sans', sans-serif;
+    font-weight: 700; font-size: 0.88rem; letter-spacing: 1px;
+    padding: 12px 28px; cursor: pointer; transition: all .2s;
+  }
+  .print-btn:hover { background: #a01018; }
+
+  .page {
+    width: 816px; min-height: 1056px;
+    background: #080810;
+    box-shadow: 0 20px 80px rgba(0,0,0,.6);
+    position: relative; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+
+  .page-bar { height: 5px; background: linear-gradient(90deg, #cd181f 0%, #d4a843 50%, #cd181f 100%); }
+
+  /* HEADER */
+  .doc-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 32px 16px; border-bottom: 1px solid #242438;
+  }
+  .doc-header-left { display: flex; align-items: center; gap: 14px; }
+  .doc-logo { font-family: 'Playfair Display', serif; font-size: 1.6rem; font-weight: 800; color: #d4a843; letter-spacing: 1px; }
+  .doc-divider { width: 1px; height: 28px; background: #242438; }
+  .doc-title { font-size: 0.9rem; font-weight: 700; color: #ede8e0; letter-spacing: .5px; }
+  .doc-subtitle { font-size: 0.72rem; color: #7a7a9a; letter-spacing: 1px; margin-top: 2px; }
+  .doc-header-right { text-align: right; }
+  .doc-property { font-size: 0.72rem; font-weight: 700; color: #cd181f; letter-spacing: 2px; text-transform: uppercase; }
+  .doc-version { font-size: 0.68rem; color: #7a7a9a; margin-top: 2px; }
+
+  /* BODY */
+  .doc-body { display: flex; gap: 0; flex: 1; }
+
+  /* INTRO STRIP */
+  .intro-strip {
+    background: #0d0c18; border-bottom: 1px solid #242438;
+    padding: 12px 32px; display: flex; align-items: center; gap: 20px;
+  }
+  .intro-strip-icon { font-size: 1.4rem; }
+  .intro-strip-text { font-size: 0.75rem; color: #7a7a9a; line-height: 1.5; flex: 1; }
+  .intro-strip-text strong { color: #ede8e0; }
+  .qr-placeholder {
+    width: 52px; height: 52px; background: #16152a;
+    border: 2px solid #2a2840; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .qr-inner { font-size: 1.6rem; }
+
+  /* PHONE MOCKUP COLUMN */
+  .phone-col {
+    width: 300px; flex-shrink: 0;
+    padding: 20px 16px 20px 32px;
+    border-right: 1px solid #242438;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .phone-label { font-size: 0.65rem; color: #7a7a9a; letter-spacing: 1px; text-transform: uppercase; font-weight: 600; margin-bottom: 10px; align-self: flex-start; }
+
+  /* Phone frame */
+  .phone-frame {
+    width: 220px;
+    background: #16152a; border: 3px solid #2a2840;
+    border-radius: 28px; overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,.5);
+    position: relative;
+  }
+  .phone-notch {
+    background: #16152a; width: 60px; height: 8px;
+    border-radius: 0 0 10px 10px; margin: 0 auto 0;
+    position: relative; z-index: 2;
+  }
+
+  /* Guest screen content */
+  .guest-screen { background: #080810; }
+
+  /* Ticker */
+  .g-ticker {
+    background: #cd181f; padding: 5px 10px;
+    font-size: 0.52rem; font-weight: 700; color: #fff; letter-spacing: 1px;
+    white-space: nowrap; overflow: hidden;
+  }
+
+  /* Guest header */
+  .g-header {
+    background: #0d0c18; border-bottom: 1px solid #2a2840;
+    padding: 8px 12px 7px;
+  }
+  .g-header-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
+  .g-logo { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 800; color: #d4a843; }
+  .g-property { font-size: 0.45rem; color: #7a7a9a; letter-spacing: 1px; text-transform: uppercase; }
+  .g-live-pill { display: flex; align-items: center; gap: 3px; background: #cd181f18; border: 1px solid #cd181f; border-radius: 10px; padding: 2px 7px; font-size: 0.48rem; font-weight: 700; color: #cd181f; }
+  .g-live-dot { width: 4px; height: 4px; border-radius: 50%; background: #cd181f; }
+  .g-chips { display: flex; gap: 4px; }
+  .g-chip { background: #080810; border: 2px solid #2a2840; border-radius: 10px; padding: 3px 7px; font-size: 0.48rem; font-weight: 700; color: #7a7a9a; }
+  .g-chip.active { border-color: #d4a843; color: #080810; background: #d4a843; }
+
+  /* Audio player */
+  .g-audio {
+    margin: 6px 10px; background: #0d0c18; border: 2px solid #00e676;
+    border-radius: 8px; padding: 8px 10px;
+  }
+  .g-audio-header { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+  .g-audio-dot { width: 6px; height: 6px; border-radius: 50%; background: #00e676; box-shadow: 0 0 5px #00e676; }
+  .g-audio-label { font-size: 0.5rem; font-weight: 700; color: #00e676; letter-spacing: 1px; text-transform: uppercase; flex: 1; }
+  .g-audio-sub { font-size: 0.42rem; color: #7a7a9a; }
+  .g-listen-btn { width: 100%; padding: 4px; background: #00e676; border: none; border-radius: 4px; color: #080810; font-size: 0.5rem; font-weight: 700; text-align: center; }
+  .g-waveform { display: flex; align-items: center; justify-content: center; gap: 2px; height: 16px; margin-bottom: 4px; }
+  .g-wave-bar { width: 2px; background: #00e676; border-radius: 2px; opacity: .7; }
+
+  /* Hot seat spotlight */
+  .g-spotlight {
+    margin: 6px 10px; background: #0d0c18;
+    border: 2px solid #cd181f; border-radius: 10px; padding: 10px;
+    text-align: center;
+  }
+  .g-spotlight-eye { font-size: 0.48rem; font-weight: 700; letter-spacing: 2px; color: #cd181f; text-transform: uppercase; margin-bottom: 4px; }
+  .g-spotlight-prize { font-family: 'Playfair Display', serif; font-size: 0.9rem; font-weight: 800; color: #d4a843; margin-bottom: 4px; }
+  .g-spotlight-sub { font-size: 0.42rem; color: #7a7a9a; margin-bottom: 6px; line-height: 1.4; }
+  .g-spotlight-timer { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 800; color: #cd181f; }
+  .g-spotlight-timer-label { font-size: 0.4rem; color: #7a7a9a; letter-spacing: 2px; }
+
+  /* Alert banner (floating) */
+  .g-banner {
+    margin: 6px 10px; background: #0d0c18;
+    border: 2px solid #cd181f; border-radius: 8px; padding: 8px 10px;
+  }
+  .g-banner-type { font-size: 0.48rem; font-weight: 700; letter-spacing: 2px; color: #cd181f; text-transform: uppercase; margin-bottom: 3px; }
+  .g-banner-msg { font-size: 0.55rem; font-weight: 600; line-height: 1.4; }
+  .g-banner-dismiss { margin-top: 4px; background: transparent; border: 1px solid #2a2840; border-radius: 3px; padding: 1px 6px; font-size: 0.42rem; color: #7a7a9a; }
+
+  /* Alerts feed */
+  .g-feed { padding: 0 10px 8px; }
+  .g-feed-label { font-size: 0.45rem; font-weight: 700; letter-spacing: 2px; color: #7a7a9a; text-transform: uppercase; margin-bottom: 4px; padding-top: 4px; }
+  .g-alert { background: #0d0c18; border: 1px solid #2a2840; border-left: 2px solid #d4a843; border-radius: 6px; padding: 6px 8px; margin-bottom: 4px; }
+  .g-alert.hotseat { border-left-color: #cd181f; }
+  .g-alert.jackpot { border-left-color: #00e676; }
+  .g-alert-type { font-size: 0.42rem; font-weight: 700; color: #7a7a9a; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+  .g-alert-msg { font-size: 0.52rem; font-weight: 600; line-height: 1.4; }
+  .g-alert-time { font-size: 0.4rem; color: #7a7a9a; margin-top: 2px; }
+
+  /* Rewards strip */
+  .g-rewards {
+    margin: 0 10px 10px; background: linear-gradient(135deg, #481459 0%, #2a1545 100%);
+    border: 1px solid #6a2a90; border-radius: 6px; padding: 6px 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .g-rewards-icon { font-size: 0.8rem; }
+  .g-rewards-text { font-size: 0.42rem; color: #e0c8f0; font-weight: 700; line-height: 1.4; }
+  .g-rewards-text strong { color: #d4a843; }
+
+  /* Callout bubbles */
+  .callout {
+    position: absolute; width: 20px; height: 20px; border-radius: 50%;
+    background: #cd181f; color: #fff;
+    font-size: 0.65rem; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(201,64,64,.5);
+    z-index: 10;
+  }
+
+  /* LEGEND COLUMN */
+  .legend-col {
+    flex: 1; padding: 20px 28px 20px 20px;
+    display: flex; flex-direction: column;
+  }
+  .legend-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.85rem; font-weight: 700; color: #cd181f;
+    letter-spacing: 1px; margin-bottom: 14px;
+    padding-bottom: 8px; border-bottom: 1px solid #242438;
+  }
+  .legend-items { display: flex; flex-direction: column; gap: 11px; }
+  .legend-item { display: flex; gap: 10px; align-items: flex-start; }
+  .legend-num {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #cd181f; color: #fff;
+    font-size: 0.65rem; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .legend-item-title { font-size: 0.78rem; font-weight: 700; color: #ede8e0; margin-bottom: 2px; }
+  .legend-item-desc { font-size: 0.7rem; color: #7a7a9a; line-height: 1.5; }
+  .legend-item-tip { font-size: 0.66rem; color: #d4a843; margin-top: 3px; font-weight: 600; }
+
+  .legend-divider { height: 1px; background: #242438; margin: 12px 0; }
+
+  /* Flow box */
+  .flow-box {
+    background: #0d0c18; border: 1px solid #2a2840;
+    border-radius: 8px; padding: 12px 16px; margin-top: 10px;
+  }
+  .flow-title { font-size: 0.72rem; font-weight: 700; color: #d4a843; margin-bottom: 10px; letter-spacing: .5px; }
+  .flow-steps { display: flex; flex-direction: column; gap: 8px; }
+  .flow-step { display: flex; align-items: flex-start; gap: 10px; }
+  .flow-step-num {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: #16152a; border: 1px solid #2a2840;
+    font-size: 0.6rem; font-weight: 800; color: #d4a843;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .flow-step-text { font-size: 0.7rem; color: #7a7a9a; line-height: 1.5; }
+  .flow-step-text strong { color: #ede8e0; }
+  .flow-arrow { text-align: center; font-size: 0.7rem; color: #3a3a58; margin: -4px 0; padding-left: 8px; }
+
+  /* FOOTER */
+  .doc-footer {
+    border-top: 1px solid #242438; padding: 10px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: #0a0a14;
+  }
+  .doc-footer-left { font-size: 0.62rem; color: #7a7a9a; }
+  .doc-footer-left strong { color: #d4a843; }
+  .doc-footer-right { font-size: 0.62rem; color: #7a7a9a; }
+</style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
+
+<div class="page">
+  <div class="page-bar"></div>
+
+  <!-- HEADER -->
+  <div class="doc-header">
+    <div class="doc-header-left">
+      <div class="doc-logo">HotSeat</div>
+      <div class="doc-divider"></div>
+      <div>
+        <div class="doc-title">Guest View — What Your Guests See</div>
+        <div class="doc-subtitle">For Floor Directors &amp; Supervisors</div>
+      </div>
+    </div>
+    <div class="doc-header-right">
+      <div class="doc-property">Horseshoe Lake Charles</div>
+      <div class="doc-version">Guest View Guide · v1.0 · peak-platforms.com</div>
+    </div>
+  </div>
+
+  <!-- INTRO STRIP -->
+  <div class="intro-strip">
+    <div class="intro-strip-icon">📱</div>
+    <div class="intro-strip-text">
+      <strong>Guests access HotSeat by scanning the QR code at their machine.</strong> No app download, no login, no account — the browser opens instantly and they're live on the floor feed. This page shows exactly what guests see when you fire broadcasts from the controller.
+    </div>
+    <div class="qr-placeholder"><div class="qr-inner">⬛</div></div>
+    <div style="font-size:0.62rem;color:#7a7a9a;text-align:center;flex-shrink:0;width:52px;">QR at each<br/>machine</div>
+  </div>
+
+  <!-- BODY -->
+  <div class="doc-body">
+
+    <!-- PHONE COLUMN -->
+    <div class="phone-col">
+      <div class="phone-label">Guest Phone Screen</div>
+
+      <div class="phone-frame" style="position:relative;">
+
+        <!-- Callout bubbles on phone -->
+        <div class="callout" style="right:-10px;top:12px;">1</div>
+        <div class="callout" style="right:-10px;top:48px;">2</div>
+        <div class="callout" style="right:-10px;top:88px;">3</div>
+        <div class="callout" style="right:-10px;top:148px;">4</div>
+        <div class="callout" style="right:-10px;top:210px;">5</div>
+        <div class="callout" style="right:-10px;top:290px;">6</div>
+        <div class="callout" style="right:-10px;top:370px;">7</div>
+
+        <div class="phone-notch"></div>
+        <div class="guest-screen">
+
+          <!-- Ticker -->
+          <div class="g-ticker">🔥 HOT SEAT DRAWING — Machine #2247 · Main Floor · $500 Cash Prize</div>
+
+          <!-- Header -->
+          <div class="g-header">
+            <div class="g-header-top">
+              <div>
+                <div class="g-logo">HotSeat</div>
+                <div class="g-property">Horseshoe Lake Charles</div>
+              </div>
+              <div class="g-live-pill"><div class="g-live-dot"></div>Floor Live</div>
+            </div>
+            <div class="g-chips">
+              <div class="g-chip active">🎰 Main Floor</div>
+              <div class="g-chip">💎 High Limit</div>
+              <div class="g-chip">🃏 Poker</div>
+              <div class="g-chip">🏆 Tournament</div>
+            </div>
+          </div>
+
+          <!-- Live Audio Player -->
+          <div class="g-audio">
+            <div class="g-audio-header">
+              <div class="g-audio-dot"></div>
+              <div class="g-audio-label">Floor Director — Live</div>
+              <div class="g-audio-sub">Horseshoe Lake Charles</div>
+            </div>
+            <div class="g-waveform">
+              <div class="g-wave-bar" style="height:6px;"></div>
+              <div class="g-wave-bar" style="height:10px;"></div>
+              <div class="g-wave-bar" style="height:14px;"></div>
+              <div class="g-wave-bar" style="height:8px;"></div>
+              <div class="g-wave-bar" style="height:16px;"></div>
+              <div class="g-wave-bar" style="height:10px;"></div>
+              <div class="g-wave-bar" style="height:12px;"></div>
+              <div class="g-wave-bar" style="height:6px;"></div>
+              <div class="g-wave-bar" style="height:14px;"></div>
+              <div class="g-wave-bar" style="height:9px;"></div>
+              <div class="g-wave-bar" style="height:16px;"></div>
+              <div class="g-wave-bar" style="height:7px;"></div>
+            </div>
+            <div class="g-listen-btn">▶ Listen Live</div>
+          </div>
+
+          <!-- Hot Seat Spotlight -->
+          <div class="g-spotlight">
+            <div class="g-spotlight-eye">🔥 Next Hot Seat Drawing</div>
+            <div class="g-spotlight-prize">$500 Cash Prize</div>
+            <div class="g-spotlight-sub">Stay in your seat. A random machine wins every 30 minutes.</div>
+            <div class="g-spotlight-timer">28:44</div>
+            <div class="g-spotlight-timer-label">UNTIL NEXT DRAWING</div>
+          </div>
+
+          <!-- Alert Banner -->
+          <div class="g-banner">
+            <div class="g-banner-type">🔥 Hot Seat</div>
+            <div class="g-banner-msg">Machine #2247 on the Main Floor! $500 Cash. Is that you? Stay in your seat!</div>
+            <div class="g-banner-dismiss">Dismiss</div>
+          </div>
+
+          <!-- Alerts Feed -->
+          <div class="g-feed">
+            <div class="g-feed-label">📡 Floor Alerts</div>
+            <div class="g-alert hotseat">
+              <div class="g-alert-type">🔥 Hot Seat</div>
+              <div class="g-alert-msg">HOT SEAT — Machine #2247 wins $500! Stay in your seat.</div>
+              <div class="g-alert-time">8:14 PM · Main Floor</div>
+            </div>
+            <div class="g-alert jackpot">
+              <div class="g-alert-type">💰 Jackpot</div>
+              <div class="g-alert-msg">JACKPOT HIT — Machine #1847 wins $22,450!</div>
+              <div class="g-alert-time">8:02 PM · Main Floor</div>
+            </div>
+            <div class="g-alert">
+              <div class="g-alert-type">🎁 Promotion</div>
+              <div class="g-alert-msg">DOUBLE POINTS now through midnight — swipe Caesars Rewards.</div>
+              <div class="g-alert-time">Tonight · All Sections</div>
+            </div>
+          </div>
+
+          <!-- Rewards -->
+          <div class="g-rewards">
+            <div class="g-rewards-icon">👑</div>
+            <div class="g-rewards-text"><strong>Caesars Rewards</strong> — Earn tier credits on every spin.</div>
+          </div>
+
+        </div>
+      </div>
+
+      <div style="font-size:0.62rem;color:#7a7a9a;text-align:center;margin-top:10px;line-height:1.5;max-width:200px;">
+        Guests see this screen on their phone after scanning the QR code at their machine. No app download required.
+      </div>
+    </div>
+
+    <!-- LEGEND COLUMN -->
+    <div class="legend-col">
+      <div class="legend-title">What Each Element Does</div>
+
+      <div class="legend-items">
+
+        <div class="legend-item">
+          <div class="legend-num">1</div>
+          <div>
+            <div class="legend-item-title">Scrolling Ticker</div>
+            <div class="legend-item-desc">Appears across the top of the screen when you enable <strong style="color:#ede8e0;">Ticker</strong> on a broadcast. Scrolls the message continuously. Hot seat winners, jackpot amounts, and tournament standings work especially well here.</div>
+          </div>
+        </div>
+
+        <div class="legend-item">
+          <div class="legend-num">2</div>
+          <div>
+            <div class="legend-item-title">Section Chips</div>
+            <div class="legend-item-desc">Shows the guest which section they're connected to based on the QR code they scanned. When you target a specific section in the controller, only guests in that section receive the alert.</div>
+          </div>
+        </div>
+
+        <div class="legend-item">
+          <div class="legend-num">3</div>
+          <div>
+            <div class="legend-item-title">Live Audio Player</div>
+            <div class="legend-item-desc">Appears automatically when you fire a broadcast with <strong style="color:#00e676;">Live Audio</strong> enabled. Guest taps <em>Listen Live</em> to hear your voice via AzuraCast stream. Animated waveform shows live signal.</div>
+            <div class="legend-item-tip">→ Only appears when you're on air and include audio in a broadcast.</div>
+          </div>
+        </div>
+
+        <div class="legend-item">
+          <div class="legend-num">4</div>
+          <div>
+            <div class="legend-item-title">Hot Seat Countdown</div>
+            <div class="legend-item-desc">Live countdown synced to the Hot Seat Manager on your controller. Guests watch the clock count down in real time — building anticipation before every drawing. Prize amount shown prominently.</div>
+          </div>
+        </div>
+
+        <div class="legend-item">
+          <div class="legend-num">5</div>
+          <div>
+            <div class="legend-item-title">Alert Banner</div>
+            <div class="legend-item-desc">Full-screen banner that drops from the top of the phone when you fire a broadcast. Hot seat banners appear in red, general alerts in gold. Auto-dismisses after 14 seconds or guest taps Dismiss.</div>
+            <div class="legend-item-tip">→ This is the high-attention moment — guests won't miss it.</div>
+          </div>
+        </div>
+
+        <div class="legend-item">
+          <div class="legend-num">6</div>
+          <div>
+            <div class="legend-item-title">Alerts Feed</div>
+            <div class="legend-item-desc">Running history of every broadcast you've fired this session. New alerts appear at the top. Color-coded by type — red for Hot Seat, green for Jackpot, gold for general. Guests can scroll back to review.</div>
+          </div>
+        </div>
+
+        <div class="legend-item">
+          <div class="legend-num">7</div>
+          <div>
+            <div class="legend-item-title">Caesars Rewards Strip</div>
+            <div class="legend-item-desc">Persistent branding element at the bottom of the screen. Reinforces the Caesars Rewards program and keeps brand presence on screen between alerts.</div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="legend-divider"></div>
+
+      <!-- Demo flow box -->
+      <div class="flow-box">
+        <div class="flow-title">🎯 Demo Flow — Show the GM Both Screens</div>
+        <div class="flow-steps">
+          <div class="flow-step">
+            <div class="flow-step-num">1</div>
+            <div class="flow-step-text">Open <strong>controller</strong> on your laptop. Enter PIN <strong>2025</strong>.</div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-step">
+            <div class="flow-step-num">2</div>
+            <div class="flow-step-text">Open <strong>guest view</strong> on your phone. Hand phone to the GM.</div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-step">
+            <div class="flow-step-num">3</div>
+            <div class="flow-step-text">On controller: select <strong>Hot Seat</strong> type, tap <strong>Quick Fire → Hot Seat Drawing</strong>, enable Ticker and Audio.</div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-step">
+            <div class="flow-step-num">4</div>
+            <div class="flow-step-text">Hit <strong>🔥 Fire Broadcast</strong>. GM watches the banner appear on the phone in their hand.</div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-step">
+            <div class="flow-step-num">5</div>
+            <div class="flow-step-text">Ask: <em style="color:#d4a843;">"How are you currently doing this for your hot seat drawings?"</em></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="doc-footer">
+    <div class="doc-footer-left"><strong>HotSeat</strong> · Real-Time Floor Broadcast · A Peak Platforms Product</div>
+    <div class="doc-footer-right">peak-platforms.com · Guest View Reference · Page 1 of 1</div>
+  </div>
+</div>
+
+</body>
+</html>
