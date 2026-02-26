@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>HotSeat — Real-Time Casino Floor Broadcast</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;500;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --red:#E8001E; --red2:#FF2235; --red-dim:#b50018;
+  --red-glow:rgba(232,0,30,0.45); --red-faint:rgba(232,0,30,0.1);
+  --amber:#FF8C00; --amber-pale:rgba(255,140,0,0.15);
+  --gold:#FFB800; --gold-pale:rgba(255,184,0,0.15);
+  --white:#FFFFFF; --cream:#F0EBE3;
+  --black:#050308; --dark:#0A0712; --panel:#110E1A;
+  --panel2:#181325; --border:#261E38; --border2:#342848;
+  --muted:#8075A0; --faint:#221A33;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'Barlow',sans-serif;background:var(--black);color:var(--white);overflow-x:hidden;}
+
+/* NOISE */
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");opacity:.022;pointer-events:none;z-index:9998;}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;height:68px;display:flex;align-items:center;justify-content:space-between;padding:0 56px;transition:background .3s,border-bottom .3s;}
+nav.scrolled{background:rgba(5,3,8,.96);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);}
+.nav-brand{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.nav-brand-dot{width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 14px var(--red-glow);animation:throb 1.6s ease-in-out infinite;}
+@keyframes throb{0%,100%{box-shadow:0 0 8px var(--red-glow)}50%{box-shadow:0 0 22px var(--red-glow),0 0 40px rgba(232,0,30,0.2)}}
+.nav-wordmark{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:5px;color:var(--white);}
+.nav-center{display:flex;gap:36px;}
+.nav-center a{font-family:'Barlow Condensed',sans-serif;font-size:.82rem;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color .2s;}
+.nav-center a:hover{color:var(--white);}
+.nav-cta{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:.82rem;letter-spacing:2.5px;text-transform:uppercase;text-decoration:none;background:var(--red);color:var(--white);padding:11px 28px;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);transition:all .2s;}
+.nav-cta:hover{background:var(--red2);box-shadow:0 0 28px var(--red-glow);}
+
+/* ── MARQUEE ── */
+.marquee-bar{background:var(--red);height:38px;overflow:hidden;display:flex;align-items:center;margin-top:68px;}
+.marquee-track{display:flex;white-space:nowrap;animation:scroll 18s linear infinite;}
+.marquee-track:hover{animation-play-state:paused;}
+.m-item{font-family:'Barlow Condensed',sans-serif;font-size:.8rem;font-weight:800;letter-spacing:3px;text-transform:uppercase;padding:0 28px;display:flex;align-items:center;gap:10px;}
+.m-dot{width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.5);}
+@keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* ── HERO ── */
+.hero{min-height:calc(100vh - 106px);display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:0;position:relative;overflow:hidden;}
+.hero-bg{position:absolute;inset:0;pointer-events:none;}
+.hero-bg-slash{position:absolute;top:0;right:0;width:55%;height:100%;background:linear-gradient(145deg,transparent 0%,rgba(232,0,30,0.07) 40%,rgba(232,0,30,0.12) 100%);clip-path:polygon(15% 0%,100% 0%,100% 100%,0% 100%);}
+.hero-bg-glow{position:absolute;top:20%;left:10%;width:600px;height:600px;background:radial-gradient(circle,rgba(232,0,30,0.12) 0%,transparent 65%);pointer-events:none;}
+.hero-bg-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(ellipse at 30% 50%,black 0%,transparent 70%);}
+
+.hero-left{padding:80px 56px 80px 56px;position:relative;z-index:1;}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:10px;margin-bottom:28px;}
+.hero-eyebrow-line{width:36px;height:2px;background:var(--red);}
+.hero-eyebrow-text{font-family:'Barlow Condensed',sans-serif;font-size:.75rem;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:var(--red);}
+
+.hero-h1{font-family:'Bebas Neue',sans-serif;line-height:.9;letter-spacing:3px;margin-bottom:28px;}
+.hero-h1 .line1{display:block;font-size:clamp(4.5rem,8vw,7.5rem);color:var(--white);}
+.hero-h1 .line2{display:block;font-size:clamp(5.5rem,10vw,9rem);color:var(--red);text-shadow:0 0 50px var(--red-glow);}
+.hero-h1 .line3{display:block;font-size:clamp(3rem,5.5vw,5rem);color:transparent;-webkit-text-stroke:2px rgba(255,255,255,.35);letter-spacing:5px;}
+.hero-h1 .line4{display:block;font-size:clamp(4.5rem,8vw,7.5rem);color:var(--white);}
+
+.hero-desc{font-size:1.05rem;color:var(--muted);line-height:1.75;max-width:460px;margin-bottom:40px;}
+.hero-desc strong{color:var(--cream);}
+
+.hero-btns{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:52px;}
+.btn-fire{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1rem;letter-spacing:3px;text-transform:uppercase;text-decoration:none;background:var(--red);color:var(--white);padding:16px 44px;clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);transition:all .2s;box-shadow:0 6px 36px var(--red-glow);display:inline-block;}
+.btn-fire:hover{background:var(--red2);box-shadow:0 6px 52px rgba(232,0,30,.65);transform:translateY(-2px);}
+.btn-ghost{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1rem;letter-spacing:3px;text-transform:uppercase;text-decoration:none;background:transparent;color:var(--white);padding:14px 44px;border:2px solid var(--border2);display:inline-block;transition:all .2s;}
+.btn-ghost:hover{border-color:var(--white);}
+
+.hero-stats{display:flex;gap:0;border-top:1px solid var(--border);}
+.hero-stat{padding:20px 28px 0 0;margin-right:28px;border-right:1px solid var(--border);}
+.hero-stat:last-child{border-right:none;}
+.hero-stat-num{font-family:'Bebas Neue',sans-serif;font-size:2.6rem;letter-spacing:2px;color:var(--red);line-height:1;text-shadow:0 0 18px var(--red-glow);}
+.hero-stat-label{font-family:'Barlow Condensed',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:3px;}
+
+/* ── HERO RIGHT — PHONE MOCKUP ── */
+.hero-right{position:relative;display:flex;align-items:center;justify-content:center;padding:60px 56px 60px 0;z-index:1;}
+.phone-wrap{position:relative;}
+.phone-glow{position:absolute;inset:-40px;background:radial-gradient(circle at 50% 40%,rgba(232,0,30,0.2) 0%,transparent 65%);pointer-events:none;animation:glowPulse 3s ease-in-out infinite;}
+@keyframes glowPulse{0%,100%{opacity:.7}50%{opacity:1}}
+.phone{width:340px;background:var(--dark);border:3px solid #2a2040;border-radius:36px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.06);position:relative;}
+.phone-bar{height:4px;background:linear-gradient(90deg,var(--red),var(--amber),var(--red));}
+.phone-notch{width:70px;height:10px;background:var(--dark);border-radius:0 0 12px 12px;margin:0 auto;border:3px solid #2a2040;border-top:none;}
+
+/* Phone screen content */
+.p-ticker{background:var(--red);padding:8px 14px;font-family:'Barlow Condensed',sans-serif;font-size:.72rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;overflow:hidden;white-space:nowrap;animation:tickerPan 10s linear infinite;}
+@keyframes tickerPan{0%,100%{letter-spacing:2px}50%{letter-spacing:3px}}
+
+.p-header{background:#0d0b16;border-bottom:1px solid var(--border);padding:10px 14px;}
+.p-header-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;}
+.p-logo{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:3px;color:var(--gold);}
+.p-live{display:flex;align-items:center;gap:4px;background:rgba(232,0,30,.15);border:1px solid var(--red);border-radius:20px;padding:2px 8px;font-family:'Barlow Condensed',sans-serif;font-size:.5rem;font-weight:800;letter-spacing:2px;color:var(--red);}
+.p-live-dot{width:5px;height:5px;border-radius:50%;background:var(--red);animation:throb 1.2s infinite;}
+.p-chips{display:flex;gap:5px;}
+.p-chip{background:var(--panel2);border:1.5px solid var(--border);border-radius:20px;padding:3px 9px;font-family:'Barlow Condensed',sans-serif;font-size:.52rem;font-weight:700;color:var(--muted);}
+.p-chip.on{border-color:var(--gold);color:#080810;background:var(--gold);}
+
+.p-spotlight{margin:12px 14px;background:var(--panel);border:2px solid var(--red);border-radius:10px;padding:12px;text-align:center;position:relative;overflow:hidden;}
+.p-spotlight::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(232,0,30,.15) 0%,transparent 60%);}
+.p-spot-eye{font-family:'Barlow Condensed',sans-serif;font-size:.55rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:5px;}
+.p-spot-prize{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:2px;color:var(--gold);text-shadow:0 0 16px rgba(255,184,0,.4);margin-bottom:3px;}
+.p-spot-sub{font-size:.45rem;color:var(--muted);margin-bottom:8px;line-height:1.4;}
+.p-spot-timer{font-family:'Bebas Neue',sans-serif;font-size:2.2rem;letter-spacing:3px;color:var(--red);text-shadow:0 0 20px var(--red-glow);}
+.p-spot-timer-label{font-family:'Barlow Condensed',sans-serif;font-size:.42rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+
+.p-banner{margin:0 12px 10px;background:var(--panel);border:2px solid var(--red);border-radius:8px;padding:9px 10px;animation:bannerDrop .4s ease;}
+@keyframes bannerDrop{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.p-banner-type{font-family:'Barlow Condensed',sans-serif;font-size:.52rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:3px;}
+.p-banner-msg{font-size:.68rem;font-weight:600;line-height:1.4;color:var(--cream);}
+
+.p-feed{padding:0 14px 14px;}
+.p-feed-label{font-family:'Barlow Condensed',sans-serif;font-size:.48rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.p-alert{background:var(--panel);border-left:2px solid var(--gold);padding:6px 8px;border-radius:4px;margin-bottom:5px;}
+.p-alert.hs{border-left-color:var(--red);}
+.p-alert.jp{border-left-color:#00e676;}
+.p-alert-type{font-family:'Barlow Condensed',sans-serif;font-size:.44rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:2px;}
+.p-alert-msg{font-size:.62rem;font-weight:600;line-height:1.4;}
+.p-alert-time{font-size:.4rem;color:var(--muted);margin-top:2px;}
+
+/* Floating badges on phone */
+.badge-float{position:absolute;background:var(--panel);border:1px solid var(--border2);border-radius:10px;padding:10px 14px;box-shadow:0 8px 32px rgba(0,0,0,.5);white-space:nowrap;}
+.badge-float.b1{right:-110px;top:12%;border-color:var(--red);}
+.badge-float.b2{left:-100px;top:48%;}
+.badge-float.b3{right:-100px;bottom:18%;border-color:var(--gold);}
+.badge-float-icon{font-size:1rem;display:block;margin-bottom:3px;}
+.badge-float-label{font-family:'Barlow Condensed',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:1px;color:var(--cream);}
+.badge-float-sub{font-size:.55rem;color:var(--muted);}
+
+/* ── PAIN STRIP ── */
+.pain-strip{background:var(--red);}
+.pain-inner{display:grid;grid-template-columns:repeat(3,1fr);max-width:1400px;margin:0 auto;}
+.pain-item{padding:36px 40px;border-right:1px solid rgba(255,255,255,.18);position:relative;}
+.pain-item:last-child{border-right:none;}
+.pain-num{font-family:'Bebas Neue',sans-serif;font-size:3rem;letter-spacing:2px;color:rgba(0,0,0,.2);line-height:1;margin-bottom:8px;}
+.pain-icon{font-size:1.6rem;margin-bottom:10px;}
+.pain-title{font-family:'Barlow Condensed',sans-serif;font-size:1.05rem;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:var(--white);margin-bottom:8px;}
+.pain-text{font-size:.88rem;color:rgba(255,255,255,.78);line-height:1.65;}
+
+/* ── SHARED SECTION STYLES ── */
+.eyebrow{font-family:'Barlow Condensed',sans-serif;font-size:.75rem;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:var(--red);display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+.eyebrow::before{content:'';width:28px;height:2px;background:var(--red);flex-shrink:0;}
+.section-h2{font-family:'Bebas Neue',sans-serif;font-size:clamp(3rem,5.5vw,5rem);letter-spacing:3px;line-height:.95;color:var(--white);margin-bottom:16px;}
+.section-h2 .red{color:var(--red);}
+.section-sub{font-size:.98rem;color:var(--muted);line-height:1.75;max-width:560px;margin-bottom:56px;}
+
+/* ── FEATURES ── */
+.features-section{padding:100px 56px;background:var(--dark);border-bottom:1px solid var(--border);}
+.features-section .inner{max-width:1400px;margin:0 auto;}
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;background:var(--faint);}
+.feat{background:var(--panel);padding:36px 30px;position:relative;overflow:hidden;transition:background .25s;}
+.feat:hover{background:var(--panel2);}
+.feat-accent{position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--red);transform:scaleX(0);transform-origin:left;transition:transform .35s;}
+.feat:hover .feat-accent{transform:scaleX(1);}
+.feat.star{background:rgba(232,0,30,.08);border-top:3px solid var(--red);}
+.feat.star:hover{background:rgba(232,0,30,.13);}
+.feat.star .feat-accent{display:none;}
+.feat-new{display:inline-block;margin-bottom:12px;background:var(--red);font-family:'Barlow Condensed',sans-serif;font-size:.62rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;padding:2px 10px;color:#fff;border-radius:2px;}
+.feat-emoji{font-size:2rem;display:block;margin-bottom:14px;}
+.feat-num{font-family:'Bebas Neue',sans-serif;font-size:3.5rem;letter-spacing:2px;color:var(--faint);line-height:1;position:absolute;top:16px;right:20px;transition:color .25s;}
+.feat:hover .feat-num{color:var(--border);}
+.feat-title{font-family:'Barlow Condensed',sans-serif;font-size:1.1rem;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:var(--white);margin-bottom:10px;}
+.feat.star .feat-title{color:var(--red);}
+.feat-text{font-size:.87rem;color:var(--muted);line-height:1.7;}
+
+/* ── AUDIO SECTION ── */
+.audio-section{padding:100px 56px;background:var(--panel);border-bottom:1px solid var(--border);position:relative;overflow:hidden;}
+.audio-section::after{content:'ON AIR';font-family:'Bebas Neue',sans-serif;font-size:14rem;letter-spacing:12px;color:rgba(232,0,30,.05);position:absolute;right:-60px;top:50%;transform:translateY(-50%) rotate(-90deg);pointer-events:none;line-height:1;white-space:nowrap;}
+.audio-inner{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;max-width:1400px;margin:0 auto;position:relative;z-index:1;}
+.audio-points{display:flex;flex-direction:column;gap:18px;margin-top:24px;}
+.audio-pt{display:flex;gap:14px;align-items:flex-start;}
+.audio-pt-pip{width:32px;height:32px;border-radius:50%;background:rgba(232,0,30,.12);border:1px solid var(--red);display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0;margin-top:2px;}
+.audio-pt-text{font-size:.9rem;color:var(--muted);line-height:1.65;}
+.audio-pt-text strong{color:var(--cream);}
+
+.audio-mock{background:var(--dark);border:2px solid var(--border2);position:relative;padding:0;}
+.audio-mock-top{height:4px;background:var(--red);}
+.audio-mock-body{padding:28px;}
+.audio-mock-header{display:flex;align-items:center;gap:10px;padding-bottom:18px;border-bottom:1px solid var(--border);margin-bottom:18px;}
+.audio-red-dot{width:12px;height:12px;border-radius:50%;background:var(--red);box-shadow:0 0 14px var(--red-glow);animation:throb 1s infinite;flex-shrink:0;}
+.audio-on-label{font-family:'Barlow Condensed',sans-serif;font-size:.82rem;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:var(--red);flex:1;}
+.audio-venue{font-size:.7rem;color:var(--muted);}
+.waveform{display:flex;align-items:center;gap:3px;height:64px;margin-bottom:18px;justify-content:center;}
+.wv{width:3px;background:var(--red);border-radius:2px;}
+.mock-listen-btn{width:100%;padding:15px;background:var(--red);border:none;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1rem;letter-spacing:3px;text-transform:uppercase;color:#fff;cursor:pointer;transition:all .2s;display:block;margin-bottom:14px;}
+.mock-listen-btn:hover{background:var(--red2);}
+.mock-tape{background:var(--red);padding:9px 14px;font-family:'Barlow Condensed',sans-serif;font-size:.78rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;overflow:hidden;white-space:nowrap;margin-bottom:14px;}
+.mock-alert-box{background:var(--panel2);border-left:3px solid var(--red);padding:14px 16px;}
+.mock-alert-eye{font-family:'Barlow Condensed',sans-serif;font-size:.65rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:5px;}
+.mock-alert-body{font-size:.88rem;font-weight:600;line-height:1.5;color:var(--cream);}
+
+/* ── USE CASES ── */
+.usecases-section{padding:100px 56px;}
+.usecases-inner{max-width:1400px;margin:0 auto;}
+.uc-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.uc{background:var(--panel);border:1px solid var(--border);padding:40px 36px;position:relative;overflow:hidden;transition:border-color .25s,transform .25s;}
+.uc::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--red);transform:scaleY(0);transform-origin:top;transition:transform .3s;}
+.uc:hover{border-color:var(--border2);transform:translateX(5px);}
+.uc:hover::before{transform:scaleY(1);}
+.uc-bg-num{font-family:'Bebas Neue',sans-serif;font-size:7rem;letter-spacing:3px;color:var(--faint);position:absolute;right:20px;top:10px;line-height:1;transition:color .25s;}
+.uc:hover .uc-bg-num{color:var(--border);}
+.uc-emoji{font-size:2.4rem;display:block;margin-bottom:14px;position:relative;z-index:1;}
+.uc-title{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:2px;color:var(--white);margin-bottom:6px;position:relative;z-index:1;}
+.uc-category{font-family:'Barlow Condensed',sans-serif;font-size:.72rem;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:var(--red);margin-bottom:14px;position:relative;z-index:1;}
+.uc-desc{font-size:.9rem;color:var(--muted);line-height:1.7;position:relative;z-index:1;}
+.uc-tag{display:inline-block;margin-top:16px;font-family:'Barlow Condensed',sans-serif;font-size:.68rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--amber);border:1px solid rgba(255,140,0,.25);padding:3px 12px;border-radius:2px;position:relative;z-index:1;}
+
+/* ── CTA ── */
+.cta-section{padding:130px 56px;background:var(--dark);text-align:center;position:relative;overflow:hidden;}
+.cta-section::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(232,0,30,.16) 0%,transparent 55%);pointer-events:none;}
+.cta-section::after{content:'HOTSEAT';font-family:'Bebas Neue',sans-serif;font-size:18rem;letter-spacing:10px;color:rgba(255,255,255,.02);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;white-space:nowrap;line-height:1;}
+.cta-inner{position:relative;z-index:1;}
+.cta-h2{font-family:'Bebas Neue',sans-serif;font-size:clamp(4.5rem,9vw,8.5rem);letter-spacing:4px;line-height:.9;color:var(--white);margin-bottom:24px;}
+.cta-h2 .red{color:var(--red);text-shadow:0 0 60px var(--red-glow),0 0 100px rgba(232,0,30,.2);}
+.cta-h2 .ghost{-webkit-text-stroke:2px rgba(255,255,255,.2);color:transparent;}
+.cta-sub{font-size:1rem;color:var(--muted);max-width:500px;margin:0 auto 48px;line-height:1.75;}
+.cta-btns{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;}
+
+/* ── FOOTER ── */
+footer{background:var(--black);border-top:3px solid var(--red);padding:32px 56px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;}
+.footer-brand{display:flex;align-items:center;gap:10px;}
+.footer-brand-dot{width:7px;height:7px;border-radius:50%;background:var(--red);box-shadow:0 0 10px var(--red-glow);}
+.footer-wordmark{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:5px;}
+.footer-links{display:flex;gap:28px;}
+.footer-links a{font-family:'Barlow Condensed',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color .2s;}
+.footer-links a:hover{color:var(--red);}
+.footer-copy{font-family:'Barlow Condensed',sans-serif;font-size:.7rem;letter-spacing:1px;color:var(--muted);}
+.footer-copy a{color:var(--muted);text-decoration:none;}
+.footer-copy a:hover{color:var(--white);}
+
+/* ── SCROLL REVEAL ── */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .6s ease,transform .6s ease;}
+.reveal.in{opacity:1;transform:translateY(0);}
+.reveal-delay-1{transition-delay:.1s;}
+.reveal-delay-2{transition-delay:.2s;}
+
+/* ── DEMO REQUEST SECTION ── */
+.demo-section{padding:100px 56px;background:var(--panel);border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+.demo-inner{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:start;max-width:1400px;margin:0 auto;}
+.demo-sub{font-size:.98rem;color:var(--muted);line-height:1.75;max-width:460px;margin-bottom:32px;}
+.demo-points{display:flex;flex-direction:column;gap:14px;}
+.demo-pt{display:flex;align-items:flex-start;gap:12px;font-size:.92rem;color:var(--muted);line-height:1.6;}
+.demo-pt-check{width:22px;height:22px;border-radius:50%;background:rgba(232,0,30,.15);border:1px solid var(--red);display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:900;color:var(--red);flex-shrink:0;margin-top:2px;}
+
+.demo-form-wrap{background:var(--dark);border:2px solid var(--border2);position:relative;}
+.demo-form-top{height:4px;background:linear-gradient(90deg,var(--red),var(--amber));}
+.demo-form-body{padding:32px;}
+.demo-form-title{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:3px;color:var(--white);margin-bottom:4px;}
+.demo-form-sub{font-size:.78rem;color:var(--muted);letter-spacing:.5px;margin-bottom:24px;}
+
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+.form-label{font-family:'Barlow Condensed',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+.form-input{background:var(--panel);border:1px solid var(--border2);color:var(--white);font-family:'Barlow',sans-serif;font-size:.88rem;padding:11px 14px;outline:none;transition:border-color .2s;width:100%;border-radius:0;}
+.form-input:focus{border-color:var(--red);}
+.form-input::placeholder{color:var(--faint);}
+.form-select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238075A0' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;}
+.form-select option{background:var(--panel);}
+.form-textarea{min-height:90px;resize:vertical;font-family:'Barlow',sans-serif;}
+.form-submit{width:100%;padding:16px;background:var(--red);border:none;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1rem;letter-spacing:3px;text-transform:uppercase;color:#fff;cursor:pointer;transition:all .2s;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);margin-bottom:12px;}
+.form-submit:hover{background:var(--red2);box-shadow:0 4px 28px var(--red-glow);}
+.form-submit.sent{background:#1a8a4a;clip-path:none;}
+.form-legal{font-size:.68rem;color:var(--muted);text-align:center;line-height:1.5;}
+
+/* ── MOBILE NAV HAMBURGER ── */
+.nav-hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px;background:none;border:none;z-index:300;}
+.nav-hamburger span{width:24px;height:2px;background:var(--white);border-radius:2px;transition:all .3s;}
+.nav-hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
+.nav-hamburger.open span:nth-child(2){opacity:0;}
+.nav-hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+.nav-mobile-menu{display:none;position:fixed;top:68px;left:0;right:0;background:rgba(5,3,8,.98);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);z-index:199;flex-direction:column;padding:16px 24px 24px;}
+.nav-mobile-menu.open{display:flex;}
+.nav-mobile-menu a{font-family:'Barlow Condensed',sans-serif;font-size:1rem;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);text-decoration:none;padding:12px 0;border-bottom:1px solid var(--border);transition:color .2s;}
+.nav-mobile-menu a:last-child{border-bottom:none;}
+.nav-mobile-menu a:hover{color:var(--white);}
+.nav-mobile-cta{margin-top:16px;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:.9rem;letter-spacing:2.5px;text-transform:uppercase;text-decoration:none;background:var(--red);color:var(--white)!important;padding:14px 28px;text-align:center;display:block;border-bottom:none!important;}
+
+@media(max-width:1024px){
+  .hero{grid-template-columns:1fr;min-height:auto;}
+  .hero-right{display:none;}
+  .hero-left{padding:60px 24px;}
+  nav{padding:0 24px;}
+  .nav-center{display:none;}
+  .nav-cta{display:none;}
+  .nav-hamburger{display:flex;}
+  .pain-inner{grid-template-columns:1fr;}
+  .pain-item{border-right:none;border-bottom:1px solid rgba(255,255,255,.15);}
+  .features-section{padding:70px 24px;}
+  .features-grid{grid-template-columns:1fr 1fr;}
+  .audio-section{padding:70px 16px;}
+  .audio-section::after{display:none;}
+  .audio-inner{grid-template-columns:1fr;gap:48px;}
+  .audio-mock{max-width:480px;width:100%;margin:0 auto;}
+  .audio-mock-body{padding:18px;}
+  .usecases-section{padding:70px 24px;}
+  .uc-grid{grid-template-columns:1fr;}
+  .cta-section{padding:80px 24px;}
+  .cta-section::after{display:none;}
+  .demo-section{padding:70px 24px;}
+  .demo-inner{grid-template-columns:1fr;gap:48px;}
+  footer{padding:28px 24px;flex-direction:column;align-items:flex-start;gap:20px;}
+  .footer-links{flex-wrap:wrap;gap:16px;}
+  .badge-float{display:none;}
+  .hero-stats{flex-wrap:wrap;gap:0;}
+  .hero-stat{min-width:calc(50% - 28px);}
+}
+@media(max-width:640px){
+  .features-grid{grid-template-columns:1fr;}
+  .hero-h1 .line1,.hero-h1 .line4{font-size:3.8rem;}
+  .hero-h1 .line2{font-size:4.5rem;}
+  .hero-h1 .line3{font-size:2.5rem;}
+  .hero-btns{flex-direction:column;}
+  .btn-fire,.btn-ghost{width:100%;text-align:center;box-sizing:border-box;}
+  .form-row{grid-template-columns:1fr;}
+  .pain-item{padding:24px 20px;}
+  .hero-stat{min-width:50%;}
+  .hero-stat-num{font-size:2rem;}
+  .section-sub{margin-bottom:36px;}
+  .uc{padding:28px 22px;}
+  .demo-form-body{padding:22px;}
+  .cta-h2{font-size:clamp(3rem,12vw,5rem);}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+  <a class="nav-brand" href="#"><div class="nav-brand-dot"></div><div class="nav-wordmark">HOTSEAT</div></a>
+  <div class="nav-center">
+    <a href="#features">⚡ Features</a>
+    <a href="#audio">🎙️ Live Audio</a>
+    <a href="#usecases">🔥 Use Cases</a>
+    <a href="#demo">📋 Request Demo</a>
+  </div>
+  <a class="nav-cta" href="controller.html" target="_blank">Open Demo →</a>
+  <button class="nav-hamburger" id="hamburger" aria-label="Open menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- MOBILE NAV MENU -->
+<div class="nav-mobile-menu" id="mobileMenu">
+  <a href="#features" onclick="closeMobile()">⚡ Features</a>
+  <a href="#audio" onclick="closeMobile()">🎙️ Live Audio</a>
+  <a href="#usecases" onclick="closeMobile()">🔥 Use Cases</a>
+  <a href="#demo" onclick="closeMobile()">📋 Request Demo</a>
+  <a class="nav-mobile-cta" href="controller.html" target="_blank">Open Demo →</a>
+</div>
+
+<!-- MARQUEE -->
+<div class="marquee-bar">
+  <div class="marquee-track">
+    <div class="m-item">🔥 Hot Seat Drawing<div class="m-dot"></div></div>
+    <div class="m-item">💰 Jackpot Alert<div class="m-dot"></div></div>
+    <div class="m-item">🏆 Tournament Update<div class="m-dot"></div></div>
+    <div class="m-item">🎙️ Live Director Audio<div class="m-dot"></div></div>
+    <div class="m-item">📣 Instant Floor Broadcast<div class="m-dot"></div></div>
+    <div class="m-item">🎁 Promo Push<div class="m-dot"></div></div>
+    <div class="m-item">👑 VIP Alert<div class="m-dot"></div></div>
+    <div class="m-item">🔥 Hot Seat Drawing<div class="m-dot"></div></div>
+    <div class="m-item">💰 Jackpot Alert<div class="m-dot"></div></div>
+    <div class="m-item">🏆 Tournament Update<div class="m-dot"></div></div>
+    <div class="m-item">🎙️ Live Director Audio<div class="m-dot"></div></div>
+    <div class="m-item">📣 Instant Floor Broadcast<div class="m-dot"></div></div>
+    <div class="m-item">🎁 Promo Push<div class="m-dot"></div></div>
+    <div class="m-item">👑 VIP Alert<div class="m-dot"></div></div>
+  </div>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg">
+    <div class="hero-bg-slash"></div>
+    <div class="hero-bg-glow"></div>
+    <div class="hero-bg-grid"></div>
+  </div>
+
+  <div class="hero-left">
+    <div class="hero-eyebrow"><div class="hero-eyebrow-line"></div><div class="hero-eyebrow-text">Real-Time Casino Floor Broadcast</div></div>
+    <h1 class="hero-h1">
+      <span class="line1">EVERY</span>
+      <span class="line2">ALERT.</span>
+      <span class="line3">EVERY</span>
+      <span class="line4">GUEST.</span>
+    </h1>
+    <p class="hero-desc">HotSeat fires hot seat drawings, jackpot alerts, tournament standings, and <strong>your live voice</strong> directly to every guest's phone the moment you tap. No PA. No app. No missed winners.</p>
+    <div class="hero-btns">
+      <a class="btn-fire" href="controller.html" target="_blank">🔥 Open Floor Controller</a>
+      <a class="btn-ghost" href="guest.html" target="_blank">📱 See Guest View</a>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="hero-stat-num">0s</div><div class="hero-stat-label">Latency</div></div>
+      <div class="hero-stat"><div class="hero-stat-num">NO APP</div><div class="hero-stat-label">Required</div></div>
+      <div class="hero-stat"><div class="hero-stat-num">1 TAP</div><div class="hero-stat-label">Every Screen</div></div>
+      <div class="hero-stat"><div class="hero-stat-num">LIVE</div><div class="hero-stat-label">Audio</div></div>
+    </div>
+  </div>
+
+  <!-- PHONE MOCKUP -->
+  <div class="hero-right">
+    <div class="phone-wrap">
+      <div class="phone-glow"></div>
+
+      <!-- Floating badges -->
+      <div class="badge-float b1">
+        <span class="badge-float-icon">🔥</span>
+        <div class="badge-float-label">Hot Seat Fired</div>
+        <div class="badge-float-sub">247 guests notified</div>
+      </div>
+      <div class="badge-float b2">
+        <span class="badge-float-icon">🎙️</span>
+        <div class="badge-float-label">Director On Air</div>
+        <div class="badge-float-sub">Live audio active</div>
+      </div>
+      <div class="badge-float b3">
+        <span class="badge-float-icon">🏆</span>
+        <div class="badge-float-label">Tournament Live</div>
+        <div class="badge-float-sub">Standings updated</div>
+      </div>
+
+      <div class="phone">
+        <div class="phone-bar"></div>
+        <div class="phone-notch"></div>
+
+        <div class="p-ticker">🔥 HOT SEAT — Machine #2247 · Main Floor · $500 Cash Prize</div>
+
+        <div class="p-header">
+          <div class="p-header-row">
+            <div class="p-logo">HOTSEAT</div>
+            <div class="p-live"><div class="p-live-dot"></div>LIVE</div>
+          </div>
+          <div class="p-chips">
+            <div class="p-chip on">🎰 Main Floor</div>
+            <div class="p-chip">💎 High Limit</div>
+            <div class="p-chip">🃏 Poker</div>
+          </div>
+        </div>
+
+        <div class="p-spotlight">
+          <div class="p-spot-eye">🔥 Next Hot Seat Drawing</div>
+          <div class="p-spot-prize">$500 Cash Prize</div>
+          <div class="p-spot-sub">Stay in your seat. Random machine wins every 30 min.</div>
+          <div class="p-spot-timer">28:44</div>
+          <div class="p-spot-timer-label">Until Next Drawing</div>
+        </div>
+
+        <div class="p-banner">
+          <div class="p-banner-type">🔥 HOT SEAT ALERT</div>
+          <div class="p-banner-msg">Machine #2247 on the Main Floor wins $500! Is that you? Stay seated!</div>
+        </div>
+
+        <div class="p-feed">
+          <div class="p-feed-label">📡 Floor Alerts</div>
+          <div class="p-alert hs">
+            <div class="p-alert-type">🔥 Hot Seat</div>
+            <div class="p-alert-msg">Machine #2247 wins $500 Cash!</div>
+            <div class="p-alert-time">8:14 PM · Main Floor</div>
+          </div>
+          <div class="p-alert jp">
+            <div class="p-alert-type">💰 Jackpot</div>
+            <div class="p-alert-msg">Machine #1847 wins $22,450!</div>
+            <div class="p-alert-time">8:02 PM · Main Floor</div>
+          </div>
+          <div class="p-alert">
+            <div class="p-alert-type">🎁 Promotion</div>
+            <div class="p-alert-msg">Double Points through midnight!</div>
+            <div class="p-alert-time">Tonight · All Sections</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PAIN STRIP -->
+<div class="pain-strip">
+  <div class="pain-inner">
+    <div class="pain-item">
+      <div class="pain-num">01</div>
+      <div class="pain-icon">😤</div>
+      <div class="pain-title">Missed Hot Seat Winners</div>
+      <div class="pain-text">Guests are wearing headphones. They're at the bathroom. They don't hear the PA. You draw a winner and they're gone. That prize gets wasted and the drama falls flat.</div>
+    </div>
+    <div class="pain-item">
+      <div class="pain-num">02</div>
+      <div class="pain-icon">🙈</div>
+      <div class="pain-title">Tournament Players Flying Blind</div>
+      <div class="pain-text">No live standings. No time updates. Players have no idea if they're winning or losing until they walk to the kiosk. Engagement craters in the final critical minutes.</div>
+    </div>
+    <div class="pain-item">
+      <div class="pain-num">03</div>
+      <div class="pain-icon">📢</div>
+      <div class="pain-title">PA Can't Reach Everyone</div>
+      <div class="pain-text">Floor noise, ambient music, and distance kill your PA system. High Limit can't hear Main Floor announcements. Your biggest moments get swallowed by the room.</div>
+    </div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="features-section" id="features">
+  <div class="inner">
+    <div class="reveal"><div class="eyebrow">Built For The Floor</div></div>
+    <h2 class="section-h2 reveal reveal-delay-1">EVERYTHING YOU <span class="red">NEED.</span><br/>NOTHING YOU DON'T.</h2>
+    <div class="features-grid reveal reveal-delay-2">
+      <div class="feat star">
+        <div class="feat-new">✨ New Feature</div>
+        <span class="feat-emoji">🎙️</span>
+        <div class="feat-title">Live Audio Broadcast</div>
+        <div class="feat-text">Your voice in every earbud simultaneously. Go on air via AzuraCast and guests hear you announce the hot seat winner live — while the banner fires on their screen at the same moment.</div>
+      </div>
+      <div class="feat"><div class="feat-num">02</div><span class="feat-emoji">🔥</span><div class="feat-title">Hot Seat Manager</div><div class="feat-text">Built-in countdown timer with auto-fire. Set the prize, start the clock, walk away. Fires the drawing automatically at zero — machine number, section, and prize amount all populated.</div><div class="feat-accent"></div></div>
+      <div class="feat"><div class="feat-num">03</div><span class="feat-emoji">🎯</span><div class="feat-title">Section Targeting</div><div class="feat-text">Broadcast to all sections simultaneously or target one area precisely. Main Floor. High Limit. Poker Room. Tournament. One tap, surgical delivery.</div><div class="feat-accent"></div></div>
+      <div class="feat"><div class="feat-num">04</div><span class="feat-emoji">📺</span><div class="feat-title">Scrolling Ticker</div><div class="feat-text">Tournament standings, jackpot totals, and promo messages scroll continuously across every guest's screen between alerts. No kiosk walk, no confusion.</div><div class="feat-accent"></div></div>
+      <div class="feat"><div class="feat-num">05</div><span class="feat-emoji">📱</span><div class="feat-title">No App Download</div><div class="feat-text">Guest scans QR at their machine. Browser opens instantly. Connected in under 10 seconds. No App Store visit, no account creation, zero friction between the floor and every guest.</div><div class="feat-accent"></div></div>
+      <div class="feat"><div class="feat-num">06</div><span class="feat-emoji">🔒</span><div class="feat-title">Broadcast Only</div><div class="feat-text">One direction — floor to guest. Zero security exposure, zero compliance risk, zero IT review required. Guests receive, they don't send. Clean, controlled, and immediate.</div><div class="feat-accent"></div></div>
+      <div class="feat"><div class="feat-num">07</div><span class="feat-emoji">⚡</span><div class="feat-title">Quick Fire Messages</div><div class="feat-text">Eight pre-written messages for your most common alerts. Tap any button to populate the message field instantly. Hot seat, jackpot, double points, VIP — all one tap from broadcast.</div><div class="feat-accent"></div></div>
+      <div class="feat"><div class="feat-num">08</div><span class="feat-emoji">📋</span><div class="feat-title">Broadcast Log</div><div class="feat-text">Every alert logged automatically with type, message, section, and timestamp. Full session history in one glance. Color-coded by alert type for instant review.</div><div class="feat-accent"></div></div>
+      <div class="feat"><div class="feat-num">09</div><span class="feat-emoji">🚀</span><div class="feat-title">Zero IT Infrastructure</div><div class="feat-text">Runs entirely in the browser. No server installation, no app deployment, no IT project required. A new property can be live and broadcasting in under an hour.</div><div class="feat-accent"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- AUDIO SECTION -->
+<section class="audio-section" id="audio">
+  <div class="audio-inner">
+    <div class="reveal">
+      <div class="eyebrow">🎙️ New Feature</div>
+      <h2 class="section-h2">YOUR VOICE.<br/>EVERY <span class="red">EARBUD.</span><br/>RIGHT NOW.</h2>
+      <p style="font-size:.98rem;color:var(--muted);line-height:1.75;max-width:480px;">When you fire a hot seat drawing guests don't just see a banner — they <em>hear</em> your voice calling it live. The energy of the PA delivered directly to every phone on the floor simultaneously.</p>
+      <div class="audio-points">
+        <div class="audio-pt"><div class="audio-pt-pip">🎙️</div><div class="audio-pt-text"><strong>One click to go on air</strong> — AzuraCast integration built in. Hit Go Live and your stream is active instantly.</div></div>
+        <div class="audio-pt"><div class="audio-pt-pip">📱</div><div class="audio-pt-text"><strong>Audio player appears on guest screens</strong> — fires automatically when you broadcast with live audio enabled.</div></div>
+        <div class="audio-pt"><div class="audio-pt-pip">🔥</div><div class="audio-pt-text"><strong>Hot seat countdowns narrated live</strong> — build tension, count down the final seconds, call the winner in your own voice.</div></div>
+        <div class="audio-pt"><div class="audio-pt-pip">🏆</div><div class="audio-pt-text"><strong>Tournament energy amplified</strong> — narrate the final minutes live across every section simultaneously.</div></div>
+      </div>
+    </div>
+    <div class="audio-mock reveal reveal-delay-1">
+      <div class="audio-mock-top"></div>
+      <div class="audio-mock-body">
+        <div class="audio-mock-header">
+          <div class="audio-red-dot"></div>
+          <div class="audio-on-label">🔴 Floor Director — On Air</div>
+          <div class="audio-venue">Horseshoe Lake Charles</div>
+        </div>
+        <div class="waveform" id="waveform"></div>
+        <button class="mock-listen-btn">▶ Listen Live</button>
+        <div class="mock-tape">🔥 HOT SEAT — Machine #2247 · Main Floor · $500 Cash Prize</div>
+        <div class="mock-alert-box">
+          <div class="mock-alert-eye">🔥 HOT SEAT DRAWING</div>
+          <div class="mock-alert-body">Machine #2247 on the Main Floor wins $500 Cash! Is that you? Stay in your seat — your host is on the way!</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- USE CASES -->
+<section class="usecases-section" id="usecases">
+  <div class="usecases-inner">
+    <div class="reveal"><div class="eyebrow">Every Moment On The Floor</div></div>
+    <h2 class="section-h2 reveal reveal-delay-1">FOUR REASONS<br/>TO <span class="red">GO LIVE.</span></h2>
+    <div class="uc-grid reveal reveal-delay-2">
+      <div class="uc">
+        <div class="uc-bg-num">01</div>
+        <span class="uc-emoji">🔥</span>
+        <div class="uc-title">Hot Seat Drawings</div>
+        <div class="uc-category">Most Popular Use Case</div>
+        <div class="uc-desc">Every guest sees the drawing the moment you fire it. Winning machine number on every screen. Director's voice in every earbud. No PA dependency. No missed winners. No guests walking away at the wrong moment.</div>
+        <div class="uc-tag">🎯 Drives Floor Engagement</div>
+      </div>
+      <div class="uc">
+        <div class="uc-bg-num">02</div>
+        <span class="uc-emoji">🏆</span>
+        <div class="uc-title">Slot Tournaments</div>
+        <div class="uc-category">High Engagement Vertical</div>
+        <div class="uc-desc">Live standings scroll on every participant's screen. Director narrates the final countdown live. Score updates and the final result pushed the moment it's official. Players stay locked in until the very last spin.</div>
+        <div class="uc-tag">🎰 Keeps Players On Machines</div>
+      </div>
+      <div class="uc">
+        <div class="uc-bg-num">03</div>
+        <span class="uc-emoji">💰</span>
+        <div class="uc-title">Jackpot Alerts</div>
+        <div class="uc-category">Floor Energy Driver</div>
+        <div class="uc-desc">Jackpot hit fires to every connected guest simultaneously. Director goes on air to celebrate live. The raw energy of a floor jackpot amplified across every phone on the property at once.</div>
+        <div class="uc-tag">⚡ Amplifies Big Moments</div>
+      </div>
+      <div class="uc">
+        <div class="uc-bg-num">04</div>
+        <span class="uc-emoji">🎁</span>
+        <div class="uc-title">Promotional Pushes</div>
+        <div class="uc-category">Revenue Driver</div>
+        <div class="uc-desc">Double points window opening. Free play for the next 20 minutes. VIP event starting now. Push to every guest at exactly the right moment — timed to floor activity and dwell time patterns.</div>
+        <div class="uc-tag">💵 Converts Dwell Time</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-inner">
+    <h2 class="cta-h2">READY TO<br/><span class="red">FIRE</span><br/><span class="ghost">YOUR FLOOR?</span></h2>
+    <p class="cta-sub">Open the live demo. Walk a GM through a full hot seat drawing with live audio. No login required, no setup — just the experience that sells itself.</p>
+    <div class="cta-btns">
+      <a class="btn-fire" href="controller.html" target="_blank">🔥 Open Floor Controller</a>
+      <a class="btn-ghost" href="guest.html" target="_blank">📱 See Guest View</a>
+    </div>
+  </div>
+</section>
+
+<!-- DEMO REQUEST -->
+<section class="demo-section" id="demo">
+  <div class="demo-inner">
+    <div class="demo-left reveal">
+      <div class="eyebrow">🎰 Enterprise Inquiry</div>
+      <h2 class="section-h2">REQUEST A<br/><span class="red">LIVE DEMO.</span></h2>
+      <p class="demo-sub">HotSeat is a custom deployment for casino properties. No pricing page — every engagement starts with a conversation. Tell us about your property and we'll schedule a live walkthrough on your floor.</p>
+      <div class="demo-points">
+        <div class="demo-pt"><div class="demo-pt-check">✓</div><div>Live demo on your actual floor hardware</div></div>
+        <div class="demo-pt"><div class="demo-pt-check">✓</div><div>Hot seat drawing fired in real time during the meeting</div></div>
+        <div class="demo-pt"><div class="demo-pt-check">✓</div><div>Custom configuration for your sections and branding</div></div>
+        <div class="demo-pt"><div class="demo-pt-check">✓</div><div>Multi-property rollout pricing available</div></div>
+      </div>
+    </div>
+    <div class="demo-right reveal reveal-delay-1">
+      <div class="demo-form-wrap">
+        <div class="demo-form-top"></div>
+        <div class="demo-form-body">
+          <div class="demo-form-title">📋 Request a Demo</div>
+          <div class="demo-form-sub">We'll respond within one business day.</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">First Name</label>
+              <input class="form-input" type="text" placeholder="Mike"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Last Name</label>
+              <input class="form-input" type="text" placeholder="Johnson"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Property Name</label>
+            <input class="form-input" type="text" placeholder="Horseshoe Lake Charles"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Your Role</label>
+            <select class="form-input form-select">
+              <option value="" disabled selected>Select your role</option>
+              <option>General Manager</option>
+              <option>Director of Slots</option>
+              <option>VP of Marketing</option>
+              <option>Director of Casino Operations</option>
+              <option>IT Director</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input class="form-input" type="email" placeholder="you@casinogroup.com"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone (optional)</label>
+            <input class="form-input" type="tel" placeholder="(555) 000-0000"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Number of Properties</label>
+            <select class="form-input form-select">
+              <option value="" disabled selected>Select range</option>
+              <option>1 property</option>
+              <option>2–5 properties</option>
+              <option>6–20 properties</option>
+              <option>20+ properties</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Anything else? (optional)</label>
+            <textarea class="form-input form-textarea" placeholder="Tell us about your floor setup, current hot seat process, or specific questions..."></textarea>
+          </div>
+          <button class="form-submit" id="submitBtn">🔥 Request Demo</button>
+          <div class="form-legal">By submitting you agree to be contacted by a HotSeat representative. No spam. Ever.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-brand"><div class="footer-brand-dot"></div><div class="footer-wordmark">HOTSEAT</div></div>
+  <div class="footer-links">
+    <a href="#features">⚡ Features</a>
+    <a href="#audio">🎙️ Audio</a>
+    <a href="#usecases">🔥 Use Cases</a>
+    <a href="controller.html" target="_blank">Demo</a>
+    <a href="https://peak-platforms.com" target="_blank">Peak Platforms</a>
+  </div>
+  <div class="footer-copy">© 2025 <a href="https://peak-platforms.com" target="_blank">Peak Platforms</a> · hotseat.fun</div>
+</footer>
+
+<script>
+  // Nav scroll
+  const nav=document.getElementById('nav');
+  window.addEventListener('scroll',()=>nav.classList.toggle('scrolled',window.scrollY>40));
+
+  // Hamburger menu
+  const hamburger=document.getElementById('hamburger');
+  const mobileMenu=document.getElementById('mobileMenu');
+  function closeMobile(){hamburger.classList.remove('open');mobileMenu.classList.remove('open');}
+  hamburger.addEventListener('click',()=>{hamburger.classList.toggle('open');mobileMenu.classList.toggle('open');});
+
+  // Scroll reveal
+  const obs=new IntersectionObserver(entries=>{
+    entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');obs.unobserve(e.target);}});
+  },{threshold:.08});
+  document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+
+  // Waveform
+  const wf=document.getElementById('waveform');
+  if(wf){
+    for(let i=0;i<36;i++){
+      const b=document.createElement('div');
+      b.className='wv';
+      const h=Math.random()*46+8;
+      b.style.cssText=`height:${h}px;animation:wv ${(.25+Math.random()*.45).toFixed(2)}s ease-in-out ${(Math.random()*.35).toFixed(2)}s infinite alternate;`;
+      wf.appendChild(b);
+    }
+    const s=document.createElement('style');
+    s.textContent='@keyframes wv{from{transform:scaleY(.2);opacity:.25}to{transform:scaleY(1);opacity:.9}}';
+    document.head.appendChild(s);
+  }
+
+  // Form submit
+  const btn=document.getElementById('submitBtn');
+  if(btn){
+    btn.addEventListener('click',()=>{
+      btn.textContent='✅ Request Received — We\'ll Be In Touch';
+      btn.classList.add('sent');
+      btn.disabled=true;
+    });
+  }
+
+  let secs=1684;
+  setInterval(()=>{
+    secs=secs>0?secs-1:1800;
+    const m=String(Math.floor(secs/60)).padStart(2,'0');
+    const s=String(secs%60).padStart(2,'0');
+    const el=document.querySelector('.p-spot-timer');
+    if(el) el.textContent=`${m}:${s}`;
+  },1000);
+</script>
+</body>
+</html>
